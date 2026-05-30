@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLRE-20 | 控制台</title>
+    <link rel="icon" type="image/x-xicon" href="{{ url_for('static', filename='ico/CoralRose298070.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-main: #e6edf3;
+            --text-muted: #8b949e;
+            --accent-color: #58a6ff;
+            --accent-glow: rgba(88, 166, 255, 0.3);
+
+            --card-bg: rgba(22, 27, 34, 0.85);
+            --card-border: rgba(88, 166, 255, 0.2);
+            --input-bg: #0d1117;
+
+            --scrollbar-thumb: #30363d;
+            --scrollbar-thumb-hover: #58a6ff;
+        }
+
+        /* 滾動條美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--scrollbar-thumb);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: var(--scrollbar-thumb-hover);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: url('https://www.yucle.yucl.qzz.io/static/clre20_background.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', "Microsoft JhengHei", sans-serif;
+            padding-bottom: 50px;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 17, 23, 0.85);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5 {
+            color: #fff;
+            text-shadow: 0 0 10px var(--accent-glow);
+            letter-spacing: 1px;
+        }
+
+        /* 全域樣式修正 text-muted */
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        /* --- [高清晰卡片] --- */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            margin-bottom: 25px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .card-header {
+            background: rgba(88, 166, 255, 0.08) !important;
+            border-bottom: 1px solid var(--card-border);
+            color: var(--accent-color);
+            font-weight: bold;
+            font-size: 1.05rem;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-header i {
+            filter: drop-shadow(0 0 5px var(--accent-glow));
+        }
+
+        /* --- [清晰表格] --- */
+        .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--text-main);
+            --bs-table-hover-bg: rgba(255, 255, 255, 0.03);
+            --bs-table-hover-color: #fff;
+            margin-bottom: 0;
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .table thead th {
+            background-color: rgba(0, 0, 0, 0.2);
+            color: #fff;
+            font-size: 0.9rem;
+            border-bottom: 2px solid var(--accent-color);
+            border-top: none;
+            padding: 12px 15px;
+            font-weight: 600;
+        }
+
+        .table td {
+            padding: 12px 15px;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        .table td a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .table td a:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(88, 166, 255, 0.05);
+        }
+
+        /* --- [輸入框] --- */
+        .form-control,
+        .form-select {
+            background-color: var(--input-bg);
+            border: 1px solid #30363d;
+            color: #fff;
+            border-radius: 6px;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background-color: #0d1117;
+            border-color: var(--accent-color);
+            color: #fff;
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* --- [按鈕] --- */
+        .btn {
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: rgba(88, 166, 255, 0.15);
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-color);
+            color: #fff;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        .btn-danger:hover {
+            background: #ff6b6b;
+            color: #fff;
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-outline-secondary {
+            border-color: #30363d;
+            color: var(--text-muted);
+            background: rgba(22, 27, 34, 0.8);
+        }
+
+        .btn-outline-secondary:hover {
+            border-color: var(--text-main);
+            color: #fff;
+            background: #21262d;
+        }
+
+        /* --- [模態框 Modal] --- */
+        .modal-content {
+            background-color: #161b22;
+            border: 1px solid var(--accent-color);
+            color: var(--text-main);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+        }
+
+        .modal-header,
+        .modal-footer {
+            border-color: #30363d;
+        }
+
+        .btn-close {
+            filter: invert(1);
+        }
+
+        /* SweetAlert */
+        div:where(.swal2-container) div:where(.swal2-popup) {
+            background: #161b22 !important;
+            border: 1px solid #30363d;
+            color: #fff !important;
+        }
+
+        /* --- [手機版優化] --- */
+        .mobile-btn-grid {
+            display: flex;
+            gap: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 15px;
+            }
+
+            .mobile-btn-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .mobile-btn-grid a,
+            .mobile-btn-grid button {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .table thead {
+                display: none;
+            }
+
+            .table,
+            .table tbody,
+            .table tr,
+            .table td {
+                display: block;
+                width: 100%;
+            }
+
+            .table tr {
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid #30363d;
+                border-radius: 8px;
+                margin-bottom: 15px;
+                padding: 10px;
+            }
+
+            .table td {
+                padding: 10px 5px;
+                border: none;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                text-align: right;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                color: #e6edf3 !important;
+            }
+
+            .table td:last-child {
+                border-bottom: none;
+            }
+
+            .table td::before {
+                content: attr(data-label);
+                font-weight: bold;
+                color: var(--accent-color);
+                margin-right: 15px;
+                min-width: 60px;
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h1 class="h3 mb-1"><i class="fa-solid fa-terminal me-2 text-primary"></i>CLRE-20 <span
+                        class="text-muted fs-6">ADMIN PANEL</span></h1>
+            </div>
+            <div class="mobile-btn-grid">
+                <a href="/clre20" class="btn btn-outline-secondary" target="_blank"><i
+                        class="fa-solid fa-earth-asia"></i> 首頁</a>
+                <button onclick="openUserModal()" class="btn btn-outline-secondary"><i class="fa-solid fa-user-pen"></i>
+                    帳號</button>
+                <button onclick="openPwdModal()" class="btn btn-outline-secondary"><i class="fa-solid fa-lock"></i>
+                    密碼</button>
+                <button onclick="confirmLogout()" class="btn btn-danger"><i class="fa-solid fa-power-off"></i>
+                    登出</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span><i class="fa-solid fa-user-astronaut me-2"></i>關於我</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <textarea class="form-control font-monospace" id="aboutContent" rows="3"
+                        style="font-size: 0.95rem;">{{ about.content if about else '' }}</textarea>
+                </div>
+                <div class="text-end">
+                    <button onclick="updateAbout()" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-2"></i>
+                        儲存更新</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span><i class="fa-solid fa-microchip me-2"></i>技能列表</span>
+                <button onclick="openSkillModal('add')" class="btn btn-sm btn-primary"><i class="fa-solid fa-plus"></i>
+                    新增</button>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th width="10%">Icon</th>
+                            <th width="30%">名稱</th>
+                            <th width="40%">Class 代碼</th>
+                            <th width="20%" class="text-end">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for skill in skills %}
+                        <tr>
+                            <td data-label="預覽" class="text-center"><i class="{{ skill.icon_class }} fa-lg"
+                                    style="color: var(--accent-color);"></i></td>
+                            <td data-label="名稱" class="fw-bold">{{ skill.name }}</td>
+                            <td data-label="代碼" class="font-monospace text-muted small">{{ skill.icon_class }}</td>
+                            <td data-label="操作" class="text-end">
+                                <button onclick="openSkillModal('edit', {{ skill.id }})"
+                                    class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteItem('skill', {{ skill.id }})"
+                                    class="btn btn-sm btn-danger action-btn"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span><i class="fa-solid fa-briefcase me-2"></i>經歷</span>
+                <button onclick="openExpModal('add')" class="btn btn-sm btn-primary"><i class="fa-solid fa-plus"></i>
+                    新增</button>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th width="20%">期間</th>
+                            <th width="25%">職稱</th>
+                            <th width="35%">描述</th>
+                            <th width="20%" class="text-end">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for exp in experiences %}
+                        <tr>
+                            <td data-label="期間" class="font-monospace text-info">{{ exp.period }}</td>
+                            <td data-label="職稱" class="fw-bold">{{ exp.title }}</td>
+                            <td data-label="描述" class="text-muted small text-truncate" style="max-width: 250px;">{{
+                                exp.description }}</td>
+                            <td data-label="操作" class="text-end">
+                                <button onclick="openExpModal('edit', {{ exp.id }})"
+                                    class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteItem('experience', {{ exp.id }})"
+                                    class="btn btn-sm btn-danger action-btn"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span><i class="fa-solid fa-rocket me-2"></i>專案</span>
+                <button onclick="openProjModal('add')" class="btn btn-sm btn-primary"><i class="fa-solid fa-plus"></i>
+                    新增</button>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th width="15%">封面</th>
+                            <th width="25%">標題</th>
+                            <th width="40%">連結</th>
+                            <th width="20%" class="text-end">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for proj in projects %}
+                        <tr>
+                            <td data-label="封面">
+                                <img src="{{ proj.image_url }}"
+                                    style="height: 40px; width: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #30363d;"
+                                    alt="img">
+                            </td>
+                            <td data-label="標題" class="fw-bold">{{ proj.title }}</td>
+                            <td data-label="連結">
+                                {% if proj.link_type == 'detail_page' %}
+                                <span class="badge bg-warning text-dark"><i class="fa-solid fa-file-lines me-1"></i>
+                                    詳情頁</span>
+                                {% else %}
+                                <a href="{{ proj.link_url }}" target="_blank"
+                                    class="text-decoration-none small text-info"><i class="fa-solid fa-link me-1"></i>
+                                    外部連結</a>
+                                {% endif %}
+                            </td>
+                            <td data-label="操作" class="text-end">
+                                <button onclick="openProjModal('edit', {{ proj.id }})"
+                                    class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteItem('project', {{ proj.id }})"
+                                    class="btn btn-sm btn-danger action-btn"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="userModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">修改帳號</h5><button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3"><label class="form-label text-muted">新帳號名稱</label><input type="text"
+                            id="newUsername" class="form-control"></div>
+                    <div class="mb-3"><label class="form-label text-muted">目前密碼 (驗證用)</label><input type="password"
+                            id="checkPwdForUser" class="form-control"></div>
+                </div>
+                <div class="modal-footer"><button onclick="saveUsername()" class="btn btn-primary">確認修改</button></div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="pwdModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">修改密碼</h5><button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3"><input type="password" id="oldPwd" class="form-control" placeholder="舊密碼"></div>
+                    <div class="mb-3"><input type="password" id="newPwd" class="form-control" placeholder="新密碼"></div>
+                    <div class="mb-3"><input type="password" id="confirmPwd" class="form-control" placeholder="確認新密碼">
+                    </div>
+                </div>
+                <div class="modal-footer"><button onclick="savePassword()" class="btn btn-primary">確認修改</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="skillModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="skillModalTitle">新增技能</h5><button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body"><input type="hidden" id="skillId">
+                    <div class="mb-3"><label class="text-muted small">技能名稱</label><input type="text" id="skillName"
+                            class="form-control" placeholder="e.g. Python"></div>
+                    <div class="mb-3"><label class="text-muted small">Icon Class</label><input type="text"
+                            id="skillIcon" class="form-control" placeholder="e.g. fa-brands fa-python"></div>
+                </div>
+                <div class="modal-footer"><button onclick="saveSkill()" class="btn btn-primary">儲存</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="expModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="expModalTitle">新增經歷</h5><button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body"><input type="hidden" id="expId">
+                    <div class="row mb-3">
+                        <div class="col-6"><label class="text-muted small">期間</label><input type="month" id="expPeriod"
+                                class="form-control"></div>
+                        <div class="col-6"><label class="text-muted small">職稱</label><input type="text" id="expTitle"
+                                class="form-control" placeholder="工程師"></div>
+                    </div>
+                    <div class="mb-3"><label class="text-muted small">描述</label><textarea id="expDesc"
+                            class="form-control" rows="4"></textarea></div>
+                </div>
+                <div class="modal-footer"><button onclick="saveExp()" class="btn btn-primary">儲存</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="projModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-sm-down modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="projModalTitle">新增專案</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="projId">
+                    <div class="mb-3"><label class="text-muted small">專案標題</label><input type="text" id="projTitle"
+                            class="form-control"></div>
+                    <div class="mb-3"><label class="text-muted small">封面圖片 URL</label><input type="text" id="projImg"
+                            class="form-control"></div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8 col-12"><label class="text-muted small">連結 URL</label><input type="text"
+                                id="projLink" class="form-control"></div>
+                        <div class="col-md-4 col-12 mt-2 mt-md-0">
+                            <label class="text-muted small">連結類型</label>
+                            <select id="projType" class="form-select" onchange="toggleLinkInput()">
+                                <option value="external">外部連結</option>
+                                <option value="internal">內部連結</option>
+                                <option value="detail_page">站內詳情頁 (多頁)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3"><label class="text-muted small">發布日期</label><input type="date" id="projDate"
+                            class="form-control"></div>
+                    <div class="mb-3"><label class="text-muted small">簡短介紹</label><textarea id="projDesc"
+                            class="form-control" rows="2"></textarea></div>
+
+                    <div id="detailsContainer" class="mb-3"
+                        style="display: none; border-top: 1px dashed var(--accent-color); padding-top: 15px; margin-top: 15px;">
+                        <label class="form-label text-info"><i class="fa-solid fa-file-code me-1"></i> Markdown
+                            詳細內容</label>
+                        <div class="d-flex align-items-center mb-2" style="gap: 5px; overflow-x: auto;">
+                            <div id="pageTabs" class="d-flex" style="gap: 5px;"></div>
+                            <button class="btn btn-sm btn-outline-success" onclick="addNewPage()" title="加一頁"><i
+                                    class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div class="input-group mb-2">
+                            <input type="file" id="mdFileUpload" class="form-control" accept=".md,.txt">
+                            <button class="btn btn-outline-info" type="button" onclick="loadMdFile()"><i
+                                    class="fa-brands fa-markdown"></i> 讀取</button>
+                        </div>
+                        <textarea id="projDetails" class="form-control font-monospace" rows="8"
+                            placeholder="# Markdown Content..." oninput="updateCurrentPageContent()"></textarea>
+                        <div class="d-flex justify-content-between mt-2">
+                            <small class="text-muted" id="pageIndicator">Page 1</small>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentPage()"
+                                id="btnDelPage"><i class="fa-solid fa-trash"></i> 刪頁</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                    <button onclick="saveProj()" class="btn btn-primary">儲存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container text-center">
+            <p class="mb-0" style="opacity: 0.5; font-size: 0.8rem;">
+                &copy; Copyright © 2025 CLRE-20. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        async function sendData(url, data, method = 'POST') {
+            try { return await (await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })).json(); }
+            catch (error) { Swal.fire({ title: '連線錯誤', text: '伺服器無回應', icon: 'error', background: '#161b22', color: '#fff' }); return null; }
+        }
+        async function handleResponse(res) {
+            if (res && res.status === 'success') { await Swal.fire({ title: '成功', text: res.message, icon: 'success', timer: 1000, showConfirmButton: false, background: '#161b22', color: '#fff' }); location.reload(); }
+            else { Swal.fire({ title: '失敗', text: res ? res.message : '未知錯誤', icon: 'error', background: '#161b22', color: '#fff' }); }
+        }
+
+        /* --- [新增] 登出確認 --- */
+        async function confirmLogout() {
+            const result = await Swal.fire({
+                title: '確定登出?',
+                text: "系統將結束目前的連線階段",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: '登出',
+                cancelButtonText: '取消',
+                background: '#161b22',
+                color: '#fff'
+            });
+
+            if (result.isConfirmed) {
+                window.location.href = '/clre20/logout';
+            }
+        }
+
+        let pagesContent = [""];
+        let currentPageIndex = 0;
+
+        function renderPageTabs() {
+            const container = document.getElementById('pageTabs'); container.innerHTML = '';
+            pagesContent.forEach((_, index) => {
+                const btn = document.createElement('button');
+                btn.className = `btn btn-sm ${index === currentPageIndex ? 'btn-primary' : 'btn-outline-secondary'}`;
+                btn.innerText = `P${index + 1}`;
+                btn.onclick = () => switchPage(index);
+                container.appendChild(btn);
+            });
+            document.getElementById('btnDelPage').disabled = (pagesContent.length <= 1);
+            document.getElementById('pageIndicator').innerText = `Page ${currentPageIndex + 1} / ${pagesContent.length}`;
+        }
+        function switchPage(index) {
+            pagesContent[currentPageIndex] = document.getElementById('projDetails').value;
+            currentPageIndex = index;
+            document.getElementById('projDetails').value = pagesContent[index];
+            renderPageTabs();
+        }
+        function addNewPage() { pagesContent.push(""); switchPage(pagesContent.length - 1); }
+        function deleteCurrentPage() {
+            if (pagesContent.length <= 1) return;
+            Swal.fire({ title: '刪除此頁?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', background: '#161b22', color: '#fff' }).then((r) => {
+                if (r.isConfirmed) {
+                    pagesContent.splice(currentPageIndex, 1);
+                    if (currentPageIndex >= pagesContent.length) currentPageIndex = pagesContent.length - 1;
+                    document.getElementById('projDetails').value = pagesContent[currentPageIndex];
+                    renderPageTabs();
+                }
+            });
+        }
+        function updateCurrentPageContent() { pagesContent[currentPageIndex] = document.getElementById('projDetails').value; }
+        function loadMdFile() {
+            const file = document.getElementById('mdFileUpload').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('projDetails').value = e.target.result;
+                    pagesContent[currentPageIndex] = e.target.result;
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function toggleLinkInput() {
+            const type = document.getElementById('projType').value;
+            const isDetail = (type === 'detail_page');
+            document.getElementById('projLink').disabled = isDetail;
+            document.getElementById('detailsContainer').style.display = isDetail ? 'block' : 'none';
+        }
+
+        const userModal = new bootstrap.Modal(document.getElementById('userModal'));
+        const pwdModal = new bootstrap.Modal(document.getElementById('pwdModal'));
+        const skillModal = new bootstrap.Modal(document.getElementById('skillModal'));
+        const expModal = new bootstrap.Modal(document.getElementById('expModal'));
+        const projModal = new bootstrap.Modal(document.getElementById('projModal'));
+
+        function openUserModal() { document.getElementById('newUsername').value = ''; document.getElementById('checkPwdForUser').value = ''; userModal.show(); }
+        async function saveUsername() { const res = await sendData('/clre20/admin/change_username', { new_username: document.getElementById('newUsername').value, password: document.getElementById('checkPwdForUser').value }); if (res && res.status === 'success') location.href = '/clre20/logout'; else handleResponse(res); }
+
+        function openPwdModal() { document.getElementById('oldPwd').value = ''; document.getElementById('newPwd').value = ''; document.getElementById('confirmPwd').value = ''; pwdModal.show(); }
+        async function savePassword() { const res = await sendData('/clre20/admin/change_password', { old_password: document.getElementById('oldPwd').value, new_password: document.getElementById('newPwd').value, confirm_password: document.getElementById('confirmPwd').value }); if (res && res.status === 'success') { pwdModal.hide(); handleResponse(res); } else handleResponse(res); }
+
+        async function updateAbout() { handleResponse(await sendData('/clre20/admin/update_about', { content: document.getElementById('aboutContent').value })); }
+
+        async function openSkillModal(type, id = null) {
+            if (type === 'edit') { const res = await (await fetch(`/clre20/admin/api/skill/${id}`)).json(); document.getElementById('skillId').value = res.id; document.getElementById('skillName').value = res.name; document.getElementById('skillIcon').value = res.icon_class; document.getElementById('skillModalTitle').innerText = '修改技能'; }
+            else { document.getElementById('skillId').value = ''; document.getElementById('skillName').value = ''; document.getElementById('skillIcon').value = ''; document.getElementById('skillModalTitle').innerText = '新增技能'; }
+            skillModal.show();
+        }
+        async function saveSkill() { const id = document.getElementById('skillId').value; const url = id ? `/clre20/admin/skill/update/${id}` : '/clre20/admin/skill/add'; handleResponse(await sendData(url, { name: document.getElementById('skillName').value, icon_class: document.getElementById('skillIcon').value })); }
+
+        async function deleteItem(type, id) {
+            const r = await Swal.fire({ title: '確定刪除?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', background: '#161b22', color: '#fff' });
+            if (r.isConfirmed) handleResponse(await sendData(`/clre20/admin/${type}/delete/${id}`, {}, 'POST'));
+        }
+
+        async function openExpModal(type, id = null) {
+            if (type === 'edit') { const res = await (await fetch(`/clre20/admin/api/experience/${id}`)).json(); document.getElementById('expId').value = res.id; document.getElementById('expPeriod').value = res.period; document.getElementById('expTitle').value = res.title; document.getElementById('expDesc').value = res.description; document.getElementById('expModalTitle').innerText = '修改經歷'; }
+            else { document.getElementById('expId').value = ''; document.getElementById('expPeriod').value = ''; document.getElementById('expTitle').value = ''; document.getElementById('expDesc').value = ''; document.getElementById('expModalTitle').innerText = '新增經歷'; }
+            expModal.show();
+        }
+        async function saveExp() { const id = document.getElementById('expId').value; const url = id ? `/clre20/admin/experience/update/${id}` : '/clre20/admin/experience/add'; handleResponse(await sendData(url, { period: document.getElementById('expPeriod').value, title: document.getElementById('expTitle').value, description: document.getElementById('expDesc').value })); }
+
+        async function openProjModal(type, id = null) {
+            document.getElementById('mdFileUpload').value = '';
+            pagesContent = [""]; currentPageIndex = 0;
+
+            if (type === 'edit') {
+                const res = await (await fetch(`/clre20/admin/api/project/${id}`)).json();
+                document.getElementById('projId').value = res.id;
+                document.getElementById('projTitle').value = res.title;
+                document.getElementById('projImg').value = res.image_url;
+                document.getElementById('projLink').value = res.link_url;
+                document.getElementById('projType').value = res.link_type;
+                document.getElementById('projDate').value = res.date || '';
+                document.getElementById('projDesc').value = res.description;
+
+                if (Array.isArray(res.details) && res.details.length > 0) pagesContent = res.details;
+                else if (res.details) pagesContent = [res.details];
+                else pagesContent = [""];
+
+                document.getElementById('projDetails').value = pagesContent[0];
+                document.getElementById('projModalTitle').innerText = '修改專案';
+            } else {
+                document.getElementById('projId').value = '';
+                document.getElementById('projTitle').value = '';
+                document.getElementById('projImg').value = '';
+                document.getElementById('projLink').value = '';
+                document.getElementById('projType').value = 'external';
+                document.getElementById('projDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('projDesc').value = '';
+                pagesContent = [""];
+                document.getElementById('projDetails').value = "";
+                document.getElementById('projModalTitle').innerText = '新增專案';
+            }
+            toggleLinkInput(); renderPageTabs(); projModal.show();
+        }
+
+        async function saveProj() {
+            pagesContent[currentPageIndex] = document.getElementById('projDetails').value;
+            const id = document.getElementById('projId').value;
+            const data = {
+                title: document.getElementById('projTitle').value,
+                image_url: document.getElementById('projImg').value,
+                link_url: document.getElementById('projLink').value,
+                link_type: document.getElementById('projType').value,
+                description: document.getElementById('projDesc').value,
+                date: document.getElementById('projDate').value,
+                details: pagesContent
+            };
+            const url = id ? `/clre20/admin/project/update/${id}` : '/clre20/admin/project/add';
+            handleResponse(await sendData(url, data));
+        }
+    </script>
+</body>
+
+</html>

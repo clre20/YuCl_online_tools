@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Login | CLRE-20</title>
+    <link rel="icon" type="image/x-xicon" href="{{ url_for('static', filename='ico/CoralRose298070.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-main: #c9d1d9;
+            --text-muted: #aab2bf;
+            --accent-color: #58a6ff;
+            --accent-glow: rgba(88, 166, 255, 0.5);
+            --card-bg: rgba(22, 27, 34, 0.25);
+            --input-bg: rgba(0, 0, 0, 0.25);
+            --border-color: rgba(255, 255, 255, 0.15);
+            --error-color: #ff6b6b;
+            --success-color: #2ea043;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--bg-color);
+            background-image: url('https://www.yucle.yucl.qzz.io/static/clre20_background.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 17, 23, 0.3);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .login-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 45px 35px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            transition: all 0.4s ease;
+        }
+
+        /* --- [新增] 錯誤時的抖動動畫 --- */
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translateX(-8px);
+                border-color: var(--error-color);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translateX(8px);
+                border-color: var(--error-color);
+            }
+        }
+
+        .shake-animation {
+            animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
+            /* 紅色光暈 */
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .profile-icon {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            border: 2px solid rgba(88, 166, 255, 0.8);
+            padding: 4px;
+            background: rgba(88, 166, 255, 0.1);
+            backdrop-filter: blur(5px);
+            margin: 0 auto 20px;
+            display: block;
+            object-fit: cover;
+            box-shadow: 0 0 25px var(--accent-glow);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        .login-header h2 {
+            color: #fff;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-header p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .form-group i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #fff;
+            opacity: 0.7;
+            font-size: 1.1rem;
+            transition: 0.3s;
+            z-index: 2;
+        }
+
+        .form-control {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 14px 15px 14px 50px;
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+            backdrop-filter: blur(5px);
+        }
+
+        .form-control::placeholder {
+            color: rgba(201, 209, 217, 0.5);
+        }
+
+        .form-control:focus {
+            background: rgba(0, 0, 0, 0.5);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 15px rgba(88, 166, 255, 0.3);
+        }
+
+        .form-control:focus+i {
+            color: var(--accent-color);
+            opacity: 1;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: rgba(88, 166, 255, 0.1);
+            color: #fff;
+            border: 1px solid var(--accent-color);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px var(--accent-color);
+            backdrop-filter: blur(2px);
+
+            /* 讓圖示與文字水平排列 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-login:hover {
+            background: var(--accent-color);
+            color: #0d1117;
+            box-shadow: 0 0 30px var(--accent-glow);
+            text-shadow: none;
+            transform: scale(1.02);
+        }
+
+        /* --- [新增] 成功時的按鈕樣式 --- */
+        .btn-login.success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: #fff;
+            box-shadow: 0 0 30px rgba(46, 160, 67, 0.6);
+            transform: scale(1.05);
+        }
+
+        .alert-error {
+            background: rgba(255, 50, 50, 0.1);
+            border: 1px solid rgba(255, 50, 50, 0.4);
+            color: #ff8e8e;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 0.9rem;
+            text-align: center;
+            display: none;
+            /* 預設隱藏，由 JS 控制顯示 */
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .footer-links {
+            text-align: center;
+            margin-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 20px;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .footer-links a:hover {
+            color: #fff;
+            text-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .system-info {
+            text-align: center;
+            margin-top: 25px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.7rem;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-container">
+        <div class="login-card" id="loginCard">
+            <div class="login-header">
+                <img src="{{ url_for('static', filename='ico/CoralRose298070.png') }}" alt="Profile" class="profile-icon">
+                <h2>ACCESS CONTROL</h2>
+                <p>System Identity Verification</p>
+            </div>
+
+            <div class="alert-error" id="errorMsg">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span id="errorText"></span>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" name="username" class="form-control" placeholder="Username" required
+                        autocomplete="off">
+                    <i class="fa-solid fa-user-astronaut"></i>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="password" class="form-control" placeholder="Password" required>
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <button type="submit" class="btn-login" id="loginBtn">
+                    <i class="fa-solid fa-lock" id="lockIcon"></i>
+                    <span id="btnText">Login</span>
+                </button>
+            </form>
+
+            <div class="footer-links">
+                <a href="/clre20">
+                    <i class="fa-solid fa-arrow-left-long"></i> 回首頁
+                </a>
+            </div>
+        </div>
+
+        <div class="system-info">
+            &copy; Copyright © 2025 CLRE-20. All rights reserved.
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault(); // 阻止表單直接跳轉
+
+            const btn = document.getElementById('loginBtn');
+            const icon = document.getElementById('lockIcon');
+            const card = document.getElementById('loginCard');
+            const errorBox = document.getElementById('errorMsg');
+            const errorText = document.getElementById('errorText');
+            const btnText = document.getElementById('btnText');
+
+            // 鎖定按鈕防止重複點擊
+            const originalText = btnText.innerText;
+            btnText.innerText = "Verifying...";
+            btn.disabled = true;
+            errorBox.style.display = 'none';
+            card.classList.remove('shake-animation');
+
+            const formData = new FormData(this);
+
+            try {
+                const response = await fetch('/clre20/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    // --- 成功：鎖頭打開動畫 ---
+
+                    // 1. 按鈕變綠色
+                    btn.classList.add('success');
+                    btnText.innerText = "Access Granted";
+
+                    // 2. 鎖頭圖示切換 (加上 fa-flip 動畫或是單純切換圖示)
+                    icon.classList.remove('fa-lock');
+                    icon.classList.add('fa-unlock');
+
+                    // 也可以加入 FontAwesome 的旋轉動畫
+                    // icon.classList.add('fa-beat'); 
+
+                    // 3. 延遲跳轉 (1秒後)
+                    setTimeout(() => {
+                        window.location.href = result.redirect;
+                    }, 1000);
+
+                } else {
+                    // --- 失敗：卡片抖動 ---
+                    throw new Error(result.message);
+                }
+
+            } catch (err) {
+                // 恢復按鈕
+                btn.disabled = false;
+                btnText.innerText = originalText;
+
+                // 顯示錯誤
+                errorText.innerText = err.message || "Connection Error";
+                errorBox.style.display = 'flex';
+
+                // 觸發抖動 (移除再加入 class 確保動畫重播)
+                card.classList.remove('shake-animation');
+                void card.offsetWidth; // 強制瀏覽器重繪 (Reflow) 關鍵技巧
+                card.classList.add('shake-animation');
+            }
+        });
+    </script>
+</body>
+
+</html>

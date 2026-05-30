@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLRE-20 | Command Center</title>
+    <link rel="icon" type="image/x-xicon" href="{{ url_for('static', filename='ico/CoralRose298070.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- 核心樣式 --- */
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent-color: #58a6ff;
+            --accent-glow: rgba(88, 166, 255, 0.4);
+            --border-color: #30363d;
+            --timeline-line: #30363d;
+            /* [新增] 卷軸顏色變數 */
+            --scrollbar-thumb: #30363d;
+            --scrollbar-thumb-hover: #58a6ff;
+        }
+
+        /* [新增] 全域卷軸美化 */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--scrollbar-thumb);
+            border-radius: 5px;
+            border: 2px solid var(--bg-color);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: var(--scrollbar-thumb-hover);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.6;
+            overflow-x: hidden;
+
+            /* --- 背景圖片設定 --- */
+            background-image: url('https://www.yucle.yucl.qzz.io/static/clre20_background.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* --- 背景遮罩 (Overlay) --- */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 17, 23, 0.75);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        section {
+            padding: 80px 0;
+            min-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 40px;
+            border-left: 5px solid var(--accent-color);
+            padding-left: 15px;
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* --- Hero 區塊 (包含頭像與文字) --- */
+        .hero {
+            height: 100vh;
+            padding-top: 0;
+        }
+
+        /* Hero 內容容器，讓圖文左右並排 */
+        .hero-content {
+            display: flex;
+            align-items: center;
+            /* 垂直置中 */
+            justify-content: space-between;
+            /* 左右分開 */
+            gap: 40px;
+            /* 圖片與文字的間距 */
+        }
+
+        .hero-text {
+            flex: 1;
+            /* 文字區塊佔據剩餘空間 */
+            text-align: left;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        .hero .typing-container {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            min-height: 1.6em;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            background-color: var(--accent-color);
+            animation: blink 1s infinite;
+        }
+
+        /* 圓形頭像樣式 */
+        .profile-img {
+            width: 250px;
+            /* 設定圖片大小 */
+            height: 250px;
+            border-radius: 50%;
+            /* 變成圓形 */
+            object-fit: cover;
+            /* 確保圖片不變形 */
+            border: 4px solid var(--accent-color);
+            /* 藍色邊框 */
+            box-shadow: 0 0 30px var(--accent-glow);
+            /* 發光效果 */
+            animation: profileFloat 6s ease-in-out infinite;
+            /* 輕微浮動動畫 */
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        @keyframes profileFloat {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* 技能卡片 (毛玻璃特效) */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 20px;
+        }
+
+        .skill-card {
+            background: rgba(22, 27, 34, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        }
+
+        .skill-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 25px var(--accent-glow);
+            border-color: var(--accent-color);
+            background: rgba(22, 27, 34, 0.7);
+        }
+
+        .skill-card i {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--accent-color);
+        }
+
+        /* 時間軸 */
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 100px;
+            padding-bottom: 20px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: calc(100% - 50px);
+            width: 2px;
+            background: linear-gradient(to bottom, var(--timeline-line) 80%, rgba(48, 54, 61, 0));
+        }
+
+        .timeline-progress {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 2px;
+            height: 0%;
+            background: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-color);
+            z-index: 1;
+            transition: height 0.8s ease-out;
+            max-height: calc(100% - 50px);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 50px;
+            opacity: 0.3;
+            transform: translateX(0);
+            transition: opacity 0.5s ease;
+        }
+
+        .timeline-item.active {
+            opacity: 1;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -35px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 2px solid var(--text-muted);
+            z-index: 2;
+            transition: all 0.3s;
+        }
+
+        .timeline-item.active::before {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .timeline-date {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .timeline-title {
+            font-size: 1.2rem;
+            color: #fff;
+            margin: 5px 0;
+        }
+
+        /* 專案卡片 (毛玻璃特效) */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .project-card {
+            background: rgba(22, 27, 34, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+
+            border-radius: 12px;
+            overflow: hidden;
+            transition: 0.3s;
+        }
+
+        .project-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-color: rgba(88, 166, 255, 0.5);
+        }
+
+        .project-img {
+            width: 100%;
+            height: 150px;
+            background-color: #21262d;
+            object-fit: cover;
+            opacity: 0.9;
+            transition: opacity 0.3s;
+        }
+
+        .project-card:hover .project-img {
+            opacity: 1;
+        }
+
+        .project-info {
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .project-title {
+            font-size: 1.2rem;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: rgba(48, 54, 61, 0.8);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* --- 手機版響應式調整 --- */
+        @media (max-width: 768px) {
+
+            /* 在手機上，讓圖片和文字垂直堆疊 */
+            .hero-content {
+                flex-direction: column-reverse;
+                /* 圖片在文字上方 */
+                text-align: center;
+                gap: 20px;
+            }
+
+            .hero-text {
+                text-align: center;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .profile-img {
+                width: 180px;
+                /* 手機上圖片縮小一點 */
+                height: 180px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <section class="hero container">
+        <div class="hero-content">
+            <div class="hero-text">
+                <p style="color: var(--accent-color);">Hello, World!</p>
+                <h1>I am <span style="color: #fff;">CLRE-20</span></h1>
+                <div class="typing-container">
+                    <span id="typing-text"></span><span class="cursor">|</span>
+                </div>
+            </div>
+
+            <img src="{{ url_for('static', filename='ico/CoralRose298070.png') }}" class="profile-img" alt="CLRE-20 Profile">
+        </div>
+    </section>
+
+    <section class="container">
+        <h2>技能</h2>
+        <div class="skills-grid">
+            {% for skill in skills %}
+            <div class="skill-card">
+                <i class="{{ skill.icon_class }}"></i>
+                <p>{{ skill.name }}</p>
+            </div>
+            {% else %}
+            <p>資料載入中...</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="container">
+        <h2>經歷</h2>
+        <div class="timeline" id="timeline-track">
+            <div class="timeline-progress" id="progress-bar"></div>
+
+            {% for exp in experiences|sort(attribute='period') %}
+            <div class="timeline-item">
+                <div class="timeline-date">{{ exp.period }}</div>
+                <h3 class="timeline-title">{{ exp.title }}</h3>
+                <p>{{ exp.description }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="container">
+        <h2>專案</h2>
+        <div class="projects-grid">
+            {% for project in projects %}
+            <div class="project-card">
+                <img src="{{ project.image_url }}" class="project-img" alt="{{ project.title }}">
+                <div class="project-info">
+                    <div class="project-title">{{ project.title }}</div>
+                    <p>{{ project.description }}</p>
+
+                    {% if project.link_type == 'detail_page' %}
+                    <a href="{{ url_for('CLRE20.project_detail', title=project.title) }}" class="btn">
+                        查看詳情 <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                    {% elif project.link_url %}
+                    <a href="{{ project.link_url }}" class="btn"
+                        target="{{ '_blank' if project.link_type == 'external' else '_self' }}">
+                        前往專案
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <script>
+        // --- 1. 打字機特效 ---
+        const textToType = "{{ about.content if about else 'System Booting...' }}";
+        const typingElement = document.getElementById('typing-text');
+        let typeIndex = 0;
+
+        function typeWriter() {
+            if (typeIndex < textToType.length) {
+                typingElement.innerHTML += textToType.charAt(typeIndex);
+                typeIndex++;
+                setTimeout(typeWriter, 50);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', typeWriter);
+        } else {
+            typeWriter();
+        }
+
+        // --- 2. 時間軸滾動特效 ---
+        const timeline = document.getElementById('timeline-track');
+        const progressBar = document.getElementById('progress-bar');
+        const items = document.querySelectorAll('.timeline-item');
+
+        window.addEventListener('scroll', () => {
+            if (!timeline) return;
+
+            const rect = timeline.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
+
+            let progress = 0;
+            const startOffset = windowHeight * 0.75;
+
+            if (rect.top < startOffset) {
+                const totalHeight = rect.height;
+                const scrolled = startOffset - rect.top;
+                progress = (scrolled / totalHeight) * 100;
+            }
+
+            if (progress < 0) progress = 0;
+            if (progress > 100) progress = 100;
+
+            progressBar.style.height = `${progress}%`;
+
+            items.forEach(item => {
+                const itemTop = item.getBoundingClientRect().top;
+
+                if (itemTop < windowHeight * 0.75) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

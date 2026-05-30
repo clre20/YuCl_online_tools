@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>建置中...</title>
+  <style>
+    /* 通用重設 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: #222; /* 深色背景 */
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      color: #fff; /* 文字顏色 */
+      text-align: center;
+      overflow: hidden; /* 防止粒子超出畫面產生滾動條 */
+      position: relative; /* 為了絕對定位的元素 */
+    }
+
+    /* 工地警戒線條紋 */
+    body::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: repeating-linear-gradient(
+            45deg,
+            #ffc107, /* 黃色 */
+            #ffc107 20px,
+            #222 20px, /* 深色 */
+            #222 40px
+        );
+        opacity: 0.15; /* 條紋透明度稍微提高 */
+        z-index: -1; /* 讓條紋在內容下方 */
+    }
+
+
+    .container {
+        text-align: center; /* 文字置中 */
+        padding: 30px;
+        background-color: rgba(0, 0, 0, 0.8); /* 更深的半透明黑色背景 */
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6); /* 更深的陰影效果 */
+        backdrop-filter: blur(10px); /* 更強的毛玻璃效果 */
+        -webkit-backdrop-filter: blur(10px); /* 針對 Safari */
+        border: 3px dashed #ffc107; /* 黃色虛線邊框，稍微粗一點 */
+        position: relative; /* 為了內容的 z-index */
+        z-index: 1; /* 確保內容在條紋上方 */
+        max-width: 90%; /* 限制最大寬度 */
+        width: 400px; /* 設定固定寬度 */
+    }
+
+
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 20px; /* 調整下方間距 */
+      color: #ffc107; /* 黃色標題 */
+      animation: glow 1.5s ease-in-out infinite alternate; /* 保留發光動畫 */
+    }
+
+    @keyframes glow {
+      from {
+        text-shadow: 0 0 10px rgba(255, 193, 7, 0.8); /* 黃色發光 */
+      }
+      to {
+        text-shadow: 0 0 20px rgba(255, 193, 7, 1); /* 黃色發光 */
+      }
+    }
+
+    p {
+      font-size: 1.2rem;
+      margin-top: 20px; /* 調整上方間距 */
+      margin-bottom: 30px;
+      color: #ccc; /* 淺灰色文字 */
+    }
+
+    .spinner {
+      width: 60px; /* 旋轉指示器稍微大一點 */
+      height: 60px;
+      border: 6px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffc107; /* 旋轉部分使用黃色 */
+      border-radius: 50%;
+      animation: spin 1s linear infinite; /* 保留旋轉動畫 */
+      margin: 20px auto; /* 上下方間距，並自動置中 */
+      display: block; /* 確保 margin auto 生效 */
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 墜落粒子樣式 */
+    .particle {
+        position: absolute;
+        width: 5px; /* 粒子大小 */
+        height: 5px;
+        background-color: rgba(255, 193, 7, 0.6); /* 黃色半透明 */
+        border-radius: 50%; /* 圓形粒子 */
+        pointer-events: none; /* 讓粒子不影響滑鼠事件 */
+        animation: fall linear infinite; /* 應用墜落動畫 */
+    }
+
+    /* 墜落動畫 keyframes */
+    @keyframes fall {
+        0% {
+            transform: translateY(0) translateX(0); /* 初始位置 (相對於設定的 top) */
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(100vh) translateX(var(--random-x)); /* 向下移動 100vh，並有隨機水平偏移 */
+            opacity: 0; /* 墜落到底部時漸隱 */
+        }
+    }
+
+
+    /* RWD 簡易調整 */
+    @media (max-width: 600px) {
+        h1 {
+            font-size: 2.2rem;
+        }
+        p {
+            font-size: 1rem;
+        }
+         .container {
+            padding: 20px;
+            width: 95%; /* 小螢幕下寬度更寬 */
+        }
+         .spinner {
+            width: 40px;
+            height: 40px;
+            border-width: 4px;
+            margin: 15px auto; /* 小螢幕下調整間距 */
+         }
+    }
+  </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚧 建造中 🚧</h1>
+        <div class="spinner"></div> <p>此頁面正在努力施工中！</p>
+
+        </div>
+
+  <script>
+    // JavaScript 程式碼開始
+
+    const body = document.body; // 取得 body 元素
+
+    // 函數：創建並添加一個粒子
+    function createParticle() {
+        const particle = document.createElement('div'); // 創建一個新的 div 元素
+        particle.classList.add('particle'); // 添加 particle class
+
+        // 設定粒子初始位置 (X 軸隨機，Y 軸在畫面最上方或稍微上方)
+        const startX = Math.random() * window.innerWidth;
+        particle.style.left = `${startX}px`;
+        particle.style.top = `${-Math.random() * 20}px`; // 設定初始垂直位置在畫面最上方或稍微上方 (-0px 到 -20px 之間)
+
+
+        // 隨機設定粒子大小 (稍微變化)
+        const size = Math.random() * 3 + 3; // 大小在 3px 到 6px 之間
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+
+        // 隨機設定動畫持續時間 (影響墜落速度)
+        const duration = Math.random() * 3 + 2; // 持續時間在 2 秒到 5 秒之間
+        particle.style.animationDuration = `${duration}s`;
+
+        // 隨機設定動畫延遲 (讓粒子不同時開始墜落)
+        const delay = Math.random() * 2; // 延遲在 0 秒到 2 秒之間
+        particle.style.animationDelay = `${delay}s`;
+
+        // 隨機設定水平偏移量 (讓粒子斜向墜落)
+        const randomX = (Math.random() - 0.5) * 100; // 水平偏移量在 -50px 到 50px 之間 (稍微縮小偏移範圍)
+        particle.style.setProperty('--random-x', `${randomX}px`); // 使用 CSS 變數傳遞隨機值
+
+        // 將粒子添加到 body 中
+        body.appendChild(particle);
+
+        // 動畫結束後移除粒子，避免累積過多元素
+        particle.addEventListener('animationend', () => {
+            particle.remove();
+        });
+    }
+
+    // 每隔一段時間創建一個新的粒子
+    setInterval(createParticle, 100); // 每 100 毫秒創建一個粒子 (可以調整頻率)
+
+    // JavaScript 程式碼結束
+  </script>
+</body>
+</html>
