@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YuCl 線上工具 | 首頁</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='ico/YuCl64.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #0A0908;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --color-primary: #00d2ff;   /* 亮青色 */
+            --color-secondary: #9d50bb; /* 鮮紫色 */
+            --color-accent: #ff00c8;    /* 桃紅色 */
+            --accent-glow: rgba(0, 210, 255, 0.15);
+            --text-main: #FFFFFF;
+            --text-dim: #A0A0A0;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- 定製捲軸 (Scrollbar) --- */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+            transition: background 0.3s;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.15);
+            background-clip: content-box;
+        }
+
+        /* Firefox 支援 */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+            position: relative;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', "Microsoft JhengHei", sans-serif;
+            line-height: 1.6;
+        }
+
+        /* --- 背景裝飾 --- */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 210, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(157, 80, 187, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            mask-image: radial-gradient(circle at center, black, transparent 80%);
+        }
+
+        .cursor-glow {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+            transform: translate(-50%, -50%);
+            transition: 0.1s linear;
+        }
+
+        /* --- 導覽列 --- */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+
+        nav.scrolled {
+            background: rgba(10, 9, 8, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .scroll-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 2px;
+            background: linear-gradient(to right, var(--color-primary), var(--color-secondary), var(--color-accent));
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .logo {
+            font-family: 'Noto Sans TC', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-decoration: none;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo img { height: 32px; width: 32px; }
+        .logo span { color: var(--color-primary); font-weight: 700; margin-left: 2px; letter-spacing: 0.5px; }
+
+        .nav-links { display: flex; gap: 2rem; }
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        .nav-links a:hover { color: var(--color-secondary); }
+
+        /* --- 漢堡按鈕樣式 --- */
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            z-index: 1001;
+            padding: 5px;
+        }
+
+        .menu-toggle span {
+            display: block;
+            width: 25px;
+            height: 2px;
+            background: var(--color-primary);
+            transition: var(--transition);
+            border-radius: 2px;
+        }
+
+        /* 漢堡按鈕啟動狀態 (轉為 X) */
+        .menu-toggle.active span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        .menu-toggle.active span:nth-child(2) { opacity: 0; }
+        .menu-toggle.active span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+        /* --- 側欄遮罩 (Overlay) --- */
+        .nav-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(0px);
+            -webkit-backdrop-filter: blur(0px);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* 主內容失焦效果 */
+        main, footer, .bg-grid {
+            transition: filter 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.nav-active main,
+        body.nav-active footer,
+        body.nav-active .bg-grid {
+            filter: blur(12px) brightness(0.7);
+        }
+
+        /* --- Hero 區塊 --- */
+        .hero {
+            min-height: 95vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 4rem 1rem 10rem;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(to bottom, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        /* 打字機光標效果 */
+        .cursor {
+            display: inline-block;
+            width: 3px;
+            background-color: var(--color-accent);
+            margin-left: 5px;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        #typed-text {
+            background: linear-gradient(to right, var(--color-primary), var(--color-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            max-width: 600px;
+            margin-bottom: 3rem;
+        }
+
+        /* --- 搜尋/分類區 --- */
+        .search-container {
+            width: 100%;
+            max-width: 600px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            transition: var(--transition);
+        }
+
+        .search-container:focus-within {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
+        }
+
+        .search-container i { padding: 0 15px; color: var(--color-primary); }
+
+        .search-container input {
+            background: transparent;
+            border: none;
+            color: #fff;
+            padding: 12px;
+            width: 100%;
+            font-family: 'JetBrains Mono', monospace;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-dim);
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+
+        .filter-btn:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-main); }
+        .filter-btn.active { 
+            background: linear-gradient(135deg, var(--color-secondary), var(--color-accent)); 
+            color: #fff; 
+            border: none; 
+            font-weight: 600; 
+            box-shadow: 0 5px 15px rgba(157, 80, 187, 0.3);
+        }
+
+        /* --- 工具卡片區 --- */
+        section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; }
+        .section-title { text-align: center; margin-bottom: 3rem; font-size: 2.2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .section-title::before, .section-title::after { 
+            content: ''; height: 1px; width: 50px; 
+            background: linear-gradient(to right, transparent, var(--color-primary)); 
+            opacity: 0.5; 
+        }
+        .section-title::after { background: linear-gradient(to left, transparent, var(--color-accent)); }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .tool-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 2rem;
+            text-decoration: none;
+            color: inherit;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 220px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tool-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        /* 不同的卡片配不同的懸停邊框色 */
+        .tool-card[data-category="media"]:hover { border-color: #ff4b2b; }
+        .tool-card[data-category="network"]:hover { border-color: #00d2ff; }
+        .tool-card[data-category="image"]:hover { border-color: #a8ff78; }
+        .tool-card[data-category="dev"]:hover { border-color: #fdbb2d; }
+        .tool-card[data-category="file"]:hover { border-color: #9d50bb; }
+        .tool-card[data-category="other"]:hover { border-color: #ff00c8; }
+
+        .tool-card i {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            transition: 0.3s;
+            display: inline-block;
+            transform-origin: left center;
+        }
+
+        .tool-card[data-category="media"] i { color: #ff4b2b; }
+        .tool-card[data-category="network"] i { color: #00d2ff; }
+        .tool-card[data-category="image"] i { color: #a8ff78; }
+        .tool-card[data-category="dev"] i { color: #fdbb2d; }
+        .tool-card[data-category="file"] i { color: #9d50bb; }
+        .tool-card[data-category="other"] i { color: #ff00c8; }
+
+        .tool-card:hover i { 
+            transform: scale(1.1); 
+            filter: drop-shadow(0 0 10px currentColor); 
+        }
+
+        .tool-tag {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            font-size: 0.7rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tool-card h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+        .tool-card p { color: var(--text-dim); font-size: 0.9rem; line-height: 1.5; }
+
+        /* --- 團隊區塊 --- */
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-top: 4rem;
+        }
+
+        .terminal-card {
+            background: #1e1e1e;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+            transition: var(--transition);
+        }
+        .terminal-card:hover { border-color: var(--color-secondary); }
+
+        .term-header {
+            background: #323232;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .term-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-1 { background: #ff5f56; }
+        .dot-2 { background: #ffbd2e; }
+        .dot-3 { background: #27c93f; }
+        .term-title { margin-left: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #888; }
+
+        .term-body {
+            padding: 30px;
+            display: flex;
+            gap: 25px;
+            align-items: center;
+        }
+
+        .team-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 12px;
+            object-fit: cover;
+            padding: 5px;
+        }
+        .terminal-card:nth-child(1) .team-avatar { border: 2px solid var(--color-primary); background: rgba(0, 210, 255, 0.1); }
+        .terminal-card:nth-child(2) .team-avatar { border: 2px solid var(--color-secondary); background: rgba(157, 80, 187, 0.1); }
+
+        .term-prompt { font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; font-size: 0.85rem; }
+        .terminal-card:nth-child(1) .term-prompt { color: var(--color-primary); }
+        .terminal-card:nth-child(2) .term-prompt { color: var(--color-secondary); }
+
+        .term-name {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        .term-stats {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        .stat-line { display: flex; gap: 10px; }
+        .stat-key { font-weight: bold; }
+        .terminal-card:nth-child(1) .stat-key { color: var(--color-primary); }
+        .terminal-card:nth-child(2) .stat-key { color: var(--color-secondary); }
+
+        /* --- 合作夥伴 --- */
+        .partners-container {
+            overflow: hidden;
+            padding: 2rem 0;
+            position: relative;
+        }
+
+        .partners-track {
+            display: flex;
+            gap: 40px;
+            width: max-content;
+            animation: scroll 30s linear infinite;
+        }
+
+        .partner-item {
+            background: var(--card-bg);
+            padding: 20px 40px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 180px;
+        }
+
+        .partner-item img { height: 40px; opacity: 0.7; transition: 0.3s; }
+        .partner-item:hover img { opacity: 1; }
+
+        @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(calc(-50% - 20px)); }
+        }
+
+        /* --- 頁尾 --- */
+        footer {
+            margin-top: 5rem;
+            background: rgba(0, 0, 0, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 4rem 2rem 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 40px;
+        }
+
+        .footer-brand p { color: var(--text-dim); font-size: 0.9rem; margin: 1.5rem 0; max-width: 300px; }
+        .footer-links h4 { color: var(--text-main); font-size: 1rem; margin-bottom: 1.5rem; }
+        .footer-links ul { list-style: none; }
+        .footer-links li { margin-bottom: 10px; }
+        .footer-links a { color: var(--text-dim); text-decoration: none; font-size: 0.9rem; transition: var(--transition); }
+        .footer-links a:hover { color: var(--color-accent); padding-left: 5px; }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 4rem auto 0;
+            padding: 2rem 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .copyright-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            opacity: 0.6;
+            letter-spacing: 1px;
+        }
+
+        .status-dot { width: 8px; height: 8px; background: #27c93f; border-radius: 50%; box-shadow: 0 0 10px #27c93f; animation: pulse 2s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+        /* --- 創意導引下滑 (Digital Waterfall) --- */
+        .scroll-hint {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            opacity: 0.8;
+            transition: var(--transition);
+            cursor: pointer;
+            z-index: 10;
+            animation: hint-bounce 2s infinite;
+        }
+
+        .scroll-hint:hover { opacity: 1; transform: translateX(-50%) scale(1.1); }
+
+        .scroll-hint .waterfall-column {
+            width: 4px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+            border-radius: 4px 4px 0 0;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+
+        .scroll-hint .data-stream {
+            position: absolute;
+            top: -100%;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, 
+                transparent, 
+                var(--color-primary) 30%, 
+                var(--color-secondary) 70%, 
+                var(--color-accent) 100%
+            );
+            filter: blur(1px);
+            animation: stream-flow 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .scroll-hint .v-indicator {
+            width: 24px;
+            height: 24px;
+            border-right: 4px solid var(--color-accent);
+            border-bottom: 4px solid var(--color-accent);
+            transform: rotate(45deg);
+            margin-top: -15px;
+            opacity: 0;
+            z-index: 2;
+            animation: v-pulse 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 0 0 4px 0;
+        }
+
+        @keyframes stream-flow {
+            0% { transform: translateY(-100%); opacity: 0; }
+            20% { opacity: 1; }
+            65% { transform: translateY(80%); opacity: 1; }
+            70% { transform: translateY(100%); opacity: 1; }
+            75% { transform: translateY(100%); opacity: 0; }
+            100% { transform: translateY(100%); opacity: 0; }
+        }
+
+        @keyframes hint-bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-15px); }
+            60% { transform: translateX(-50%) translateY(-7px); }
+        }
+
+        @keyframes v-pulse {
+            0%, 65% { transform: rotate(45deg) translate(-4px, -4px); opacity: 0; filter: brightness(1); }
+            70% { transform: rotate(45deg) translate(0, 0); opacity: 1; filter: brightness(1.8) drop-shadow(0 0 10px var(--color-accent)); }
+            90% { transform: rotate(45deg) translate(6px, 6px); opacity: 0.6; filter: brightness(1.2); }
+            100% { transform: rotate(45deg) translate(10px, 10px); opacity: 0; filter: brightness(1); }
+        }
+
+        @media (max-height: 650px) {
+            .scroll-hint { display: none; }
+        }
+
+        /* --- 響應式設定 --- */
+        @media (max-width: 992px) {
+            .footer-content { grid-template-columns: 1fr 1fr; }
+            .hero h1 { font-size: clamp(2.5rem, 10vw, 4rem); }
+        }
+
+        @media (max-width: 768px) {
+            nav { padding: 1rem 2rem; }
+            .logo { font-size: 1.1rem; }
+            .menu-toggle { display: flex; }
+            .nav-links {
+                position: fixed;
+                top: 0;
+                left: 100%;
+                width: 70%;
+                height: 100vh;
+                background: rgba(10, 9, 8, 0.95);
+                backdrop-filter: blur(20px);
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 3rem;
+                transform: translateX(0);
+                transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s;
+                z-index: 1000;
+                border-left: 1px solid rgba(255, 255, 255, 0.05);
+                visibility: hidden;
+                box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+            }
+            .nav-links.active { transform: translateX(-100%); visibility: visible; }
+            .hero { padding: 5rem 1rem 6rem; min-height: 90vh; }
+            section { padding: 4rem 1.5rem; }
+        }
+
+        @media (max-width: 600px) {
+            .team-grid { grid-template-columns: 1fr; }
+            .term-body { flex-direction: column; padding: 20px; gap: 15px; }
+            .footer-content { grid-template-columns: 1fr; text-align: center; }
+        }
+
+        /* --- 工具分類彈窗 (Modal) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(15px);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        .modal-overlay.active { 
+            visibility: visible;
+            opacity: 1; 
+        }
+
+        .modal-container {
+            width: 95%;
+            max-width: 480px;
+            background: #1e1e1e;
+            border-radius: 20px;
+            overflow: hidden;
+            transform: scale(0.7) translateY(50px);
+            opacity: 0;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease;
+            position: relative;
+        }
+
+        .modal-overlay.active .modal-container { 
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+
+        .modal-border-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            fill: none;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .modal-border-svg rect {
+            x: 2px;
+            y: 2px;
+            width: calc(100% - 4px);
+            height: calc(100% - 4px);
+            stroke-width: 4px;
+            rx: 18px;
+            ry: 18px;
+            stroke-dasharray: 2000;
+            stroke-dashoffset: 2000;
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.3s;
+        }
+
+        .modal-overlay.active .modal-border-svg rect {
+            stroke-dashoffset: 0;
+        }
+
+        .modal-header {
+            background: #323232;
+            padding: 18px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .modal-title { 
+            font-family: 'JetBrains Mono', monospace; 
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+        }
+        
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: 0.3s;
+            line-height: 1;
+        }
+        .modal-close:hover { color: #fff; transform: rotate(90deg); }
+
+        .modal-body { padding: 35px 25px; }
+
+        .tool-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tool-link {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 16px 20px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .modal-overlay.active .tool-link {
+            animation: item-appear 0.5s forwards cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .tool-link:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .tool-link i { font-size: 1.3rem; width: 24px; text-align: center; }
+        .tool-link span { font-weight: 600; font-size: 1.05rem; }
+
+        @keyframes item-appear {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="cursor-glow" id="glow"></div>
+
+    <nav id="main-nav">
+        <div class="scroll-progress" id="progress-bar"></div>
+        <a href="/" class="logo">
+            <img src="{{ url_for('static', filename='ico/YuCl64.png') }}" alt="YuCl Logo">
+            YuCl<span>線上工具</span>
+        </a>
+        
+        <button class="menu-toggle" id="menu-toggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <div class="nav-links" id="nav-links">
+            <a href="#tools">熱門工具</a>
+            <a href="#team">團隊</a>
+            <a href="#partners">合作夥伴</a>
+            <a href="https://uptime.cp.cloudns.be/status/yucl" target="_blank">系統狀態</a>
+        </div>
+        <div class="nav-overlay" id="nav-overlay"></div>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <h1>YuCl <span id="typed-text"></span><span class="cursor">|</span></h1>
+            <p>YuCl 提供流暢、無廣告的線上工具體驗。由熱愛技術的學生團隊打造。</p>
+            
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="tool-search" placeholder="輸入關鍵字搜尋工具">
+            </div>
+
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="all">全部工具</button>
+                <button class="filter-btn" data-filter="media">影音媒體</button>
+                <button class="filter-btn" data-filter="network">網路相關</button>
+                <button class="filter-btn" data-filter="image">圖像處理</button>
+                <button class="filter-btn" data-filter="dev">開發輔助</button>
+                <button class="filter-btn" data-filter="file">文件處理</button>
+                <button class="filter-btn" data-filter="other">其他工具</button>
+            </div>
+
+            <div class="scroll-hint" onclick="document.getElementById('tools').scrollIntoView({ behavior: 'smooth' })">
+                <div class="waterfall-column">
+                    <div class="data-stream"></div>
+                </div>
+                <div class="v-indicator"></div>
+            </div>
+        </section>
+
+        <section id="tools" class="reveal">
+            <h2 class="section-title">熱門工具</h2>
+            <div class="tools-grid" id="tools-container">
+                <div class="tool-card category-card" data-category="media" style="cursor: pointer;">
+                    <i class="fab fa-youtube"></i>
+                    <div class="tool-tag">Media / Video</div>
+                    <h3>影音媒體</h3>
+                    <p>YouTube 轉 MP3、YouTube 轉 MP4</p>
+                </div>
+                <div class="tool-card category-card" data-category="network" style="cursor: pointer;">
+                    <i class="fas fa-globe"></i>
+                    <div class="tool-tag">Network / Utils</div>
+                    <h3>網路相關</h3>
+                    <p>短網址、QR code</p>
+                </div>
+                <div class="tool-card category-card" data-category="image" style="cursor: pointer;">
+                    <i class="fas fa-paint-brush"></i>
+                    <div class="tool-tag">Image / Processor</div>
+                    <h3>圖像處理</h3>
+                    <p>圖片編輯、PDF 壓縮</p>
+                </div>
+                <div class="tool-card category-card" data-category="dev" style="cursor: pointer;">
+                    <i class="fas fa-code"></i>
+                    <div class="tool-tag">Dev / Assist</div>
+                    <h3>開發輔助</h3>
+                    <p>G-code 模擬器、GitHub 統計卡</p>
+                </div>
+                <div class="tool-card category-card" data-category="file" style="cursor: pointer;">
+                    <i class="fas fa-file-export"></i>
+                    <div class="tool-tag">File / Converter</div>
+                    <h3>文件處理</h3>
+                    <p>待開發 - 敬請期待</p>
+                </div>
+                <div class="tool-card category-card" data-category="other" style="cursor: pointer;">
+                    <i class="fas fa-fingerprint"></i>
+                    <div class="tool-tag">Other / Utils</div>
+                    <h3>其他工具</h3>
+                    <p>UUID 產生器</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="modal-overlay" id="tool-modal">
+            <div class="modal-container">
+                <svg class="modal-border-svg">
+                    <rect id="modal-rect" x="0" y="0"></rect>
+                </svg>
+                <div class="modal-header">
+                    <div class="modal-title" id="modal-category-name">CATEGORY_NAME</div>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="tool-list" id="modal-tool-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <section id="team" class="reveal">
+            <h2 class="section-title">核心團隊</h2>
+            <div class="team-grid">
+                <div class="terminal-card" onclick="window.open('https://yueyou.yucl.qzz.io/oneself', '_blank')" style="cursor: pointer;">
+                    <div class="term-header">
+                        <div class="term-dot dot-1"></div>
+                        <div class="term-dot dot-2"></div>
+                        <div class="term-dot dot-3"></div>
+                        <span class="term-title">yucl@admin:~/profile_01</span>
+                    </div>
+                    <div class="term-body">
+                        <img src="{{ url_for('static', filename='ico/YUEYOU.png') }}" alt="YUEYOU" class="team-avatar">
+                        <div class="term-content">
+                            <div class="term-prompt">admin@yucl:~$ <span style="color: var(--text-main); opacity: 0.8;">whoami</span></div>
+                            <h4 class="term-name">YUEYOU</h4>
+                            <div class="term-stats">
+                                <div class="stat-line"><span class="stat-key">ROLE:</span> Lead Developer</div>
+                                <div class="stat-line"><span class="stat-key">DEPT:</span> 工具設計 | 安全管理 | 前端設計 | 服務延伸</div>
+                                <div class="stat-line"><span class="stat-key">MOTTO:</span> 讓複雜的技術，化為極致的簡單。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="terminal-card" onclick="window.open('https://clre20.yucl.qzz.io', '_blank')" style="cursor: pointer;">
+                    <div class="term-header">
+                        <div class="term-dot dot-1"></div>
+                        <div class="term-dot dot-2"></div>
+                        <div class="term-dot dot-3"></div>
+                        <span class="term-title">admin@yucl:~/profile_02</span>
+                    </div>
+                    <div class="term-body">
+                        <img src="{{ url_for('static', filename='ico/CoralRose298070.png') }}" alt="CLRE-20" class="team-avatar">
+                        <div class="term-content">
+                            <div class="term-prompt">admin@yucl:~$ <span style="color: var(--text-main); opacity: 0.8;">whoami</span></div>
+                            <h4 class="term-name">CLRE-20</h4>
+                            <div class="term-stats">
+                                <div class="stat-line"><span class="stat-key">ROLE:</span> System Architect</div>
+                                <div class="stat-line"><span class="stat-key">DEPT:</span> 工具設計部 | 伺服器管理 | 網路管理 | 系統研發</div>
+                                <div class="stat-line"><span class="stat-key">MOTTO:</span> 複雜歸我，簡單給你</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="partners" class="reveal">
+            <h2 class="section-title">合作夥伴</h2>
+            <div class="partners-container">
+                <div class="partners-track">
+                    <div class="partner-item"><img src="{{ url_for('static', filename='ico/YUEYOU.png') }}" alt="YUEYOU"></div>
+                    <div class="partner-item"><img src="{{ url_for('static', filename='ico/CoralRose298070.png') }}" alt="CoralRose"></div>
+                    <div class="partner-item"><img src="{{ url_for('static', filename='ico/penguin.png') }}" alt="Penguin"></div>
+                    <div class="partner-item"><img src="{{ url_for('static', filename='ico/peter.jpg') }}" alt="Peter"></div>
+                    <div class="partner-item"><img src="{{ url_for('static', filename='ico/YUEYOU.png') }}" alt="YUEYOU"></div>
+                    <div class="partner-item"><img src="{{ url_for('static', filename='ico/CoralRose298070.png') }}" alt="CoralRose"></div>
+                    <div class="partner-item"><img src="{{ url_for('static', filename='ico/penguin.png') }}" alt="Penguin"></div>
+                    <div class="partner-item"><img src="{{ url_for('static', filename='ico/peter.jpg') }}" alt="Peter"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <a href="#" class="logo">
+                    <img src="{{ url_for('static', filename='ico/YuCl64.png') }}" alt="YuCl Logo">
+                    YuCl<span>線上工具</span>
+                </a>
+                <p>致力於提供最極致的線上工具體驗。無廣告、高速、且永遠免費。</p>
+                <div style="display: flex; gap: 15px; margin-top: 1rem;">
+                    <a href="mailto:service@yucl.qzz.io" style="color: var(--text-dim); font-size: 1.2rem;" title="聯繫我們"><i class="fas fa-envelope"></i></a>
+                    <a href="https://github.com/clre20/YuCl_online_tools" target="_blank" style="color: var(--text-dim); font-size: 1.2rem;" title="GitHub"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+            <div class="footer-links">
+                <h4>工具分類</h4>
+                <ul>
+                    <li><a href="#tools" onclick="applyFilter('media')">影音媒體</a></li>
+                    <li><a href="#tools" onclick="applyFilter('network')">網路相關</a></li>
+                    <li><a href="#tools" onclick="applyFilter('image')">圖像處理</a></li>
+                    <li><a href="#tools" onclick="applyFilter('dev')">開發輔助</a></li>
+                    <li><a href="#tools" onclick="applyFilter('file')">文件處理</a></li>
+                    <li><a href="#tools" onclick="applyFilter('other')">其他工具</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>快速連結</h4>
+                <ul>
+                    <li><a href="/history">歷史</a></li>
+                    <li><a href="https://uptime.cp.cloudns.be/status/yucl">系統狀態</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>法律資訊</h4>
+                <ul>
+                    <li><a href="/privacy">隱私權政策</a></li>
+                    <li><a href="/terms">使用條款</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="copyright-text">Copyright © 2024-2026 YuCl Studio. All rights reserved.</div>
+        </div>
+    </footer>
+
+    <script>
+        // 打字機效果
+        const typedTextSpan = document.getElementById("typed-text");
+        const textArray = ["各種工具", "免費安全", "穩定可靠", "簡單快速", "效率倍增", "最佳體驗", "持續創新", "你的小幫手"];
+        let textArrayIndex = 0, charIndex = 0;
+
+        function type() {
+            if (charIndex < textArray[textArrayIndex].length) {
+                typedTextSpan.textContent += textArray[textArrayIndex].charAt(charIndex++);
+                setTimeout(type, 150);
+            } else setTimeout(erase, 2000);
+        }
+
+        function erase() {
+            if (charIndex > 0) {
+                typedTextSpan.textContent = textArray[textArrayIndex].substring(0, --charIndex);
+                setTimeout(erase, 100);
+            } else {
+                textArrayIndex = (textArrayIndex + 1) % textArray.length;
+                setTimeout(type, 1000);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => setTimeout(type, 500));
+
+        // 互動
+        const glow = document.getElementById('glow');
+        const nav = document.getElementById('main-nav');
+        const progressBar = document.getElementById('progress-bar');
+        const menuToggle = document.getElementById('menu-toggle');
+        const navLinks = document.getElementById('nav-links');
+        const navOverlay = document.getElementById('nav-overlay');
+
+        function toggleMenu() {
+            menuToggle.classList.toggle('active');
+            navLinks.classList.toggle('active');
+            navOverlay.classList.toggle('active');
+            document.body.classList.toggle('nav-active');
+            document.body.style.overflow = navLinks.classList.contains('active') ? 'hidden' : '';
+        }
+
+        menuToggle.addEventListener('click', toggleMenu);
+        navOverlay.addEventListener('click', toggleMenu);
+
+        // 點擊選單項目後自動關閉側欄
+        navLinks.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (navLinks.classList.contains('active')) {
+                    toggleMenu();
+                }
+            });
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+        });
+
+        window.addEventListener('scroll', () => {
+            const scrolled = window.scrollY;
+            const scrollPercent = (scrolled / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+            progressBar.style.width = scrollPercent + '%';
+            nav.classList.toggle('scrolled', scrolled > 50);
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => entry.target.classList.toggle('active', entry.isIntersecting));
+        }, { threshold: 0.15 });
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // 工具資料與彈窗
+        const categoryTools = {
+            'media': { name: '影音媒體', color: '#ff4b2b', tools: [{ name: 'YouTube 下載', url: '/ytdl', icon: 'fas fa-download' }] },
+            'network': { name: '網路相關', color: '#00d2ff', tools: [{ name: '短網址產生器', url: '/shorturl', icon: 'fas fa-link' }, { name: 'QR Code 生成', url: '/qrcode', icon: 'fas fa-qrcode' }] },
+            'image': { name: '圖像處理', color: '#a8ff78', tools: [{ name: '圖片編輯', url: '/imgedit', icon: 'fas fa-magic' }, { name: 'PDF 壓縮', url: '/pdfcomp', icon: 'fas fa-file-pdf' }] },
+            'dev': { name: '開發輔助', color: '#fdbb2d', tools: [{ name: 'G-Code 模擬器', url: '/gcode', icon: 'fas fa-cogs' }, { name: 'GitHub 統計卡', url: '/github_stats', icon: 'fab fa-github' }] },
+            'file': { name: '文件處理', color: '#9d50bb', tools: [] },
+            'other': { name: '其他工具', color: '#ff00c8', tools: [{ name: 'UUID 產生器', url: '/uuid', icon: 'fas fa-id-card' }] }
+        };
+
+        const toolModal = document.getElementById('tool-modal'), modalTitle = document.getElementById('modal-category-name'), modalList = document.getElementById('modal-tool-list'), modalRect = document.getElementById('modal-rect');
+
+        function openModal(category) {
+            const data = categoryTools[category];
+            if (!data) return;
+            modalTitle.textContent = data.name.toUpperCase();
+            modalTitle.style.color = data.color;
+            modalRect.style.stroke = data.color;
+            modalList.innerHTML = data.tools.length ? data.tools.map((t, i) => `
+                <a href="${t.url}" class="tool-link" style="animation-delay: ${0.1 + i*0.08}s">
+                    <i class="${t.icon}" style="color: ${data.color}"></i>
+                    <span>${t.name}</span>
+                </a>`).join('') : '<div style="text-align:center;color:#888;padding:20px;">敬請期待</div>';
+            toolModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        document.getElementById('modal-close').onclick = () => { toolModal.classList.remove('active'); document.body.style.overflow = ''; };
+        
+        window.addEventListener('click', (e) => {
+            if (e.target === toolModal) {
+                toolModal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+
+        document.querySelectorAll('.category-card').forEach(c => c.onclick = () => openModal(c.dataset.category));
+
+        // 同步工具卡片說明文字
+        document.querySelectorAll('.category-card').forEach(card => {
+            const cat = card.dataset.category;
+            const data = categoryTools[cat];
+            if (data && data.tools.length > 0) {
+                const p = card.querySelector('p');
+                if (p) p.textContent = data.tools.map(t => t.name).join('、');
+            }
+        });
+
+        // 搜尋與過濾
+        const searchInput = document.getElementById('tool-search'), filterBtns = document.querySelectorAll('.filter-btn'), toolCards = document.querySelectorAll('.tool-card');
+        function filter() {
+            const term = searchInput.value.toLowerCase(), active = document.querySelector('.filter-btn.active').dataset.filter;
+            toolCards.forEach(c => {
+                const cat = c.dataset.category, text = c.innerText.toLowerCase();
+                const match = (active === 'all' || cat === active) && (term === '' || text.includes(term));
+                c.style.display = match ? 'flex' : 'none';
+            });
+        }
+        searchInput.oninput = filter;
+        
+        filterBtns.forEach(b => b.onclick = () => { 
+            filterBtns.forEach(x => x.classList.remove('active')); 
+            b.classList.add('active'); 
+            filter(); 
+            document.getElementById('tools').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // 供頁尾分類連結呼叫
+        window.applyFilter = function(category) {
+            const targetBtn = Array.from(filterBtns).find(b => b.dataset.filter === category);
+            if (targetBtn) {
+                filterBtns.forEach(x => x.classList.remove('active'));
+                targetBtn.classList.add('active');
+                filter();
+                document.getElementById('tools').scrollIntoView({ behavior: 'smooth' });
+            }
+        };
+    </script>
+</body>
+</html>

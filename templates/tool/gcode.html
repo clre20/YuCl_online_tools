@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YuCl 線上工具 | G-Code 模擬器</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='ico/YuCl64.png') }}">
+    <script src="{{ url_for('static', filename='js/page_tracker.js') }}"></script>
+    <style>
+        html, body { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background-color: #1e1e1e; 
+            display: flex; font-family: "Segoe UI", sans-serif; color: #eee; 
+        }
+        body { flex-direction: row; }
+        
+        #sidebar {
+            width: 420px; background: #252526; 
+            display: flex; flex-direction: column; border-right: 1px solid #3e3e42;
+            z-index: 10; 
+        }
+        #boot-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #111; z-index: 9999;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: #007acc; font-family: "Segoe UI", sans-serif;
+            transition: opacity 0.5s ease;
+        }
+        .loader {
+            border: 4px solid #333; border-top: 4px solid #007acc;
+            border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #boot-msg { font-size: 16px; letter-spacing: 1px; }
+        #boot-error { color: #ff4444; margin-top: 15px; display: none; font-weight: bold; text-align: center;}
+        
+        div.swal2-container {
+            z-index: 20000 !important;
+        }
+        .swal2-popup {
+            background: #252526 !important;
+            color: #eee !important;
+            border: 1px solid #444;
+        }
+        .swal2-title {
+            color: #4fc1ff !important;
+        }
+        .swal2-html-container a {
+            color: #007acc;
+            text-decoration: underline;
+        }
+        .tab-header { display: flex; background: #333; border-bottom: 1px solid #444; }
+        .tab-btn {
+            flex: 1; background: #333; border: none; color: #aaa; 
+            padding: 12px 5px; cursor: pointer; font-size: 13px; font-weight: bold;
+            border-bottom: 2px solid transparent; transition: 0.2s;
+        }
+        .tab-btn.active { color: #fff; background: #252526; border-bottom: 2px solid #007acc; }
+        .tab-content { flex: 1; padding: 15px; overflow-y: auto; display: none; }
+        .tab-content.active { display: block; }
+
+        h3 { margin: 0 0 10px 0; color: #4fc1ff; font-size: 16px; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        label { font-size: 12px; color: #aaa; margin-bottom: 4px; display:block; margin-top: 10px;}
+        .panel-box { background: #333; border-radius: 4px; padding: 10px; margin-bottom: 10px; }
+        .editor-container {
+            position: relative;
+            width: 100%;
+            height: 350px;
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            display: flex;
+            overflow: hidden;
+        }
+        .line-numbers {
+            width: 35px;
+            background: #2d2d2d;
+            color: #858585;
+            text-align: right;
+            padding: 10px 5px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            border-right: 1px solid #3e3e42;
+            user-select: none;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        textarea#gcode-input {
+            flex: 1;
+            background: #1e1e1e;
+            color: #9cdcfe;
+            border: none;
+            resize: none;
+            padding: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre;
+            box-sizing: border-box;
+            outline: none;
+            overflow-y: scroll;
+        }
+
+        .input-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .input-row input { flex: 1; background: #333; border: 1px solid #555; color: white; padding: 8px; border-radius: 4px;}
+        
+        .btn-main { width: 100%; padding: 10px; background: #007acc; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 14px; margin-top: 5px;}
+        .btn-main:hover { background: #0062a3; }
+        .btn-secondary { background: #444; margin-top: 5px; }
+        .btn-small { padding: 4px 8px; font-size: 12px; background: #555; border: 1px solid #666; color: #eee; cursor: pointer; border-radius: 3px; }
+        .btn-small:hover { background: #666; }
+        .dro-table { width: 100%; border-collapse: collapse; font-family: monospace; margin-bottom: 5px; }
+        .dro-table th { text-align: right; color: #aaa; font-size: 12px; padding: 2px 5px; border-bottom: 1px solid #555; }
+        .dro-table td { text-align: right; padding: 4px 5px; font-size: 15px; border-bottom: 1px solid #444; }
+        .dro-axis-label { font-weight: bold; width: 20px; text-align: center; }
+        .col-abs { color: #fff; font-weight: bold; }
+        .col-rel { color: #aaa; }
+        .col-mcs { color: #ffaa00; }
+
+        .jog-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; margin-top: 10px;}
+        .jog-btn { background: #444; border: 1px solid #555; color: white; padding: 12px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 14px;}
+        .jog-btn:active { background: #666; transform: scale(0.98); }
+        .step-selector { display: flex; gap: 5px; margin-bottom: 10px; }
+        .step-btn { flex: 1; padding: 6px; background: #2d2d2d; border: 1px solid #555; color: #aaa; cursor: pointer; font-size: 12px; }
+        .step-btn.active { background: #007acc; color: white; border-color: #007acc; }
+
+        .g54-row { display: flex; gap: 5px; align-items: center; }
+        .g54-input { flex: 1; background: #1e1e1e; border: 1px solid #555; color: white; width: 100%; padding: 4px; text-align: right; }
+
+        .tool-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+        .tool-table td { padding: 8px; border-bottom: 1px solid #444; }
+        .tool-color-box { width: 16px; height: 16px; border: 1px solid #fff; border-radius: 2px; }
+
+        #container { flex-grow: 1; position: relative; background: #111; overflow: hidden; }
+        #msg-bar { font-size: 12px; color: #fa0; text-align: center; margin-top: 10px; min-height: 18px; }
+        #error-overlay {
+            position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(220, 20, 20, 0.95); color: white;
+            padding: 20px 30px; border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            display: none; z-index: 1000;
+            text-align: center; font-family: "Segoe UI", sans-serif;
+            border: 2px solid #ff6666;
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-width: 300px;
+        }
+        @keyframes popIn {
+            from { transform: translate(-50%, -40px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        #error-title { font-weight: 900; font-size: 20px; margin-bottom: 8px; display: block; letter-spacing: 1px; }
+        #error-msg { font-size: 15px; line-height: 1.4; font-weight: 500;}
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            #container { height: 45%; order: 1; }
+            #sidebar { height: 55%; width: 100%; order: 2; }
+        }
+    </style>
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+    </script>
+</head>
+<body>
+    <div id="boot-overlay">
+        <div class="loader" id="boot-loader"></div>
+        <div id="boot-msg">系統初始化中...</div>
+        <div id="boot-error"></div>
+    </div>
+
+    <div id="sidebar">
+        <div class="tab-header">
+            <button class="tab-btn active" onclick="switchTab('main')">主控台</button>
+            <button class="tab-btn" onclick="switchTab('manual')">座標/手動</button>
+            <button class="tab-btn" onclick="switchTab('tools')">刀具庫</button>
+        </div>
+
+        <div id="tab-main" class="tab-content active">
+            <h3>G-Code 輸入</h3>
+            
+            <div class="editor-container">
+                <div id="line-numbers" class="line-numbers">1</div>
+                <textarea id="gcode-input" spellcheck="false" onscroll="syncScroll()" oninput="updateLineNumbers()">
+G54 G0 X0 Y0;
+G0 Z-20;
+G0 X0 Y10;
+G02 X10 Y10 I5.0;
+G0 X10 Y0;
+G0 X10 Y10;
+G02 X20.0 Y10 I5.0;
+G0 X20 Y0;
+G0 X0 Y0;
+G0 Z0;
+                </textarea>
+            </div>
+            
+            <label>動畫時間 (秒)</label>
+            <div class="input-row">
+                <input type="number" id="anim-duration" value="8" min="1">
+            </div>
+
+            <button class="btn-main" onclick="runSimulation(true)">▶ 開始動畫</button>
+            <button class="btn-main btn-secondary" onclick="runSimulation(false)">靜態路徑預覽</button>
+            <div id="msg-bar">就緒</div>
+        </div>
+
+        <div id="tab-manual" class="tab-content">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>座標顯示 (Position)</h3>
+                <button class="btn-small" onclick="zeroRelative()">相對歸零 (U/W)</button>
+            </div>
+            
+            <div class="panel-box">
+                <table class="dro-table">
+                    <thead>
+                        <tr>
+                            <th>軸</th>
+                            <th>機械</th>
+                            <th>絕對</th>
+                            <th>相對</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="dro-axis-label" style="color:#f55">X</td>
+                            <td id="dro-mcs-x" class="col-mcs">0.000</td>
+                            <td id="dro-abs-x" class="col-abs">0.000</td>
+                            <td id="dro-rel-x" class="col-rel">0.000</td>
+                        </tr>
+                        <tr>
+                            <td class="dro-axis-label" style="color:#5f5">Y</td>
+                            <td id="dro-mcs-y" class="col-mcs">0.000</td>
+                            <td id="dro-abs-y" class="col-abs">0.000</td>
+                            <td id="dro-rel-y" class="col-rel">0.000</td>
+                        </tr>
+                        <tr>
+                            <td class="dro-axis-label" style="color:#55f">Z</td>
+                            <td id="dro-mcs-z" class="col-mcs">0.000</td>
+                            <td id="dro-abs-z" class="col-abs">0.000</td>
+                            <td id="dro-rel-z" class="col-rel">0.000</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>G54 工件原點設定</h3>
+            <div class="panel-box">
+                <div class="g54-row">
+                    <span style="color:#f55;font-weight:bold;width:15px;">X</span><input type="number" id="g54-x" class="g54-input" value="0">
+                    <span style="color:#5f5;font-weight:bold;width:15px;">Y</span><input type="number" id="g54-y" class="g54-input" value="0">
+                    <span style="color:#55f;font-weight:bold;width:15px;">Z</span><input type="number" id="g54-z" class="g54-input" value="0">
+                </div>
+                <button class="btn-main btn-secondary" style="font-size:12px; padding:8px; margin-top:5px;" onclick="setG54FromCurrent()">將當前點設為原點 (G54)</button>
+            </div>
+
+            <h3>手動操作</h3>
+            <div class="panel-box">
+                <div class="step-selector">
+                    <button class="step-btn" data-step="10">10.0</button>
+                    <button class="step-btn active" data-step="1">1.0</button>
+                    <button class="step-btn" data-step="0.1">0.1</button>
+                </div>
+                <div class="jog-controls">
+                    <button class="jog-btn" onclick="manualJog('Y', 1)">Y+</button>
+                    <button class="jog-btn" onclick="manualJog('Z', 1)">Z+</button>
+                    <button class="jog-btn" onclick="manualJog('Y', -1)">Y-</button>
+                    <button class="jog-btn" onclick="manualJog('X', -1)">X-</button>
+                    <button class="jog-btn" onclick="manualJog('Z', -1)">Z-</button>
+                    <button class="jog-btn" onclick="manualJog('X', 1)">X+</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-tools" class="tab-content">
+            <h3>刀具列表</h3>
+            <div class="panel-box">
+                <table class="tool-table" id="tool-list">
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="container">
+        <div id="error-overlay">
+            <span id="error-title">⚠️ ALARM</span>
+            <span id="error-msg"></span>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        const APP_VERSION = "v0.14.1"; 
+        let isSystemLocked = true;     
+        showTermsModal();
+
+        async function showTermsModal() {
+            const result = await Swal.fire({
+                title: '服務條款與隱私政策',
+                html: `
+                    <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+                        歡迎使用 G-Code 模擬器。在繼續之前，請確認您已閱讀並同意：<br><br>
+                        1. 本工具僅供模擬參考，實際加工請以機台為準。<br>
+                        2. 禁止未經授權下載、離線使用或反向工程本系統。<br>
+                        3. 系統將收集您的連線資訊以進行安全授權驗證。<br><br>
+                        詳細內容請參閱 <a href="/terms" target="_blank">服務條款</a> 與 <a href="/privacy" target="_blank">隱私政策</a>。
+                    </div>
+                `,
+                icon: 'info',
+                allowOutsideClick: false, 
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonText: '我同意並繼續',
+                cancelButtonText: '拒絕',
+                confirmButtonColor: '#007acc',
+                cancelButtonColor: '#d33',
+                reverseButtons: true
+            });
+
+            if (result.isConfirmed) {
+                document.getElementById('boot-msg').innerText = "正在建立安全通道...";
+                performSystemCheck();
+            } else {
+                window.location.href = '/'; 
+            }
+        }
+        
+        async function generateSecurePayload() {
+            const now = new Date();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const timestamp = Math.floor(Date.now() / 1000).toString();
+            const secret = "YuCl_Gcode_Simulation_2025_Secure_Key";
+            const rawString = `${APP_VERSION}${month}${timestamp}${secret}`;
+            const msgBuffer = new TextEncoder().encode(rawString);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            const dataObj = {
+                ts: timestamp,
+                sign: signature
+            };
+            const jsonStr = JSON.stringify(dataObj);
+            const encryptedPayload = btoa(jsonStr);
+            return encryptedPayload;
+        }
+
+        async function performSystemCheck() {
+            const msgElem = document.getElementById('boot-msg');
+            const timeoutId = setTimeout(() => {
+                if (isSystemLocked) {
+                    handleBootError("連線逾時 [YUCL-CONN-002]");
+                }
+            }, 60000); 
+
+            try {
+                const payload = await generateSecurePayload();
+                msgElem.innerText = "驗證授權金鑰...";
+                const targetUrl = "{{ url_for('gcode.verify_access') }}";
+                const response = await fetch(targetUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ payload: payload })
+                });
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) { 
+                        msgElem.innerText = "驗證通過，系統啟動中...";
+                        
+                        setTimeout(() => {
+                            const overlay = document.getElementById('boot-overlay');
+                            overlay.style.opacity = '0';
+                            setTimeout(() => { 
+                                overlay.style.display = 'none'; 
+                                isSystemLocked = false;
+                                init(); 
+                            }, 500);
+                        }, 500);
+                    } else {
+                        handleBootError("授權碼無效 [YUCL-AUTH-001]");
+                    }
+                } else {
+                    handleBootError(`伺服器拒絕授權 [YUCL-AUTH-002]`);
+                }
+            } catch (error) {
+                clearTimeout(timeoutId);
+                handleBootError("網路連線異常 [YUCL-CONN-001]");
+            }
+        }
+
+        function handleBootError(msg) {
+            const loader = document.getElementById('boot-loader');
+            const msgElem = document.getElementById('boot-msg');
+            const errElem = document.getElementById('boot-error');
+            
+            loader.style.display = 'none';
+            msgElem.style.display = 'none';
+            errElem.style.display = 'block';
+            errElem.innerHTML = `⚠️ 你已被封鎖<br><br>${msg}<br><br><button onclick="location.reload()" style="padding:5px 10px; cursor:pointer;">重新整理</button>`;
+            isSystemLocked = true;
+        }
+        const TOOLS = {
+            1: { color: 0xffff00, name: "T1 (黃 EndMill)", hex: "#ffff00" },
+            2: { color: 0xff00ff, name: "T2 (紫 BallNose)", hex: "#ff00ff" },
+            3: { color: 0x00ffff, name: "T3 (青 Drill)", hex: "#00ffff" },
+            4: { color: 0xffaa00, name: "T4 (橘 Engrave)", hex: "#ffaa00" },
+            5: { color: 0xffffff, name: "T99 (白 Probe)", hex: "#ffffff" }
+        };
+
+        const MAGAZINE_CENTER_MCS = { x: -150, y: 150, z: 100 };
+        const MAGAZINE_ENTRY_OFFSET = 30; 
+
+        let camera, scene, renderer, controls;
+        let machineGroup, gcodeGroup, lineObj, toolMesh, rackGroup;
+        
+        let pathData = null;
+        let isAnimating = false;
+        let animStartTime = 0;
+        let animDuration = 5000;
+        
+        let machinePos = { x: 0, y: 0, z: 100 };
+        let relativeOffset = { x: 0, y: 0, z: 0 };
+        let jogStep = 1.0;
+        let activeToolId = 1; 
+
+        window.updateLineNumbers = function() {
+            const textarea = document.getElementById('gcode-input');
+            const lines = textarea.value.split('\n').length;
+            const lineNumbersElem = document.getElementById('line-numbers');
+            let html = '';
+            for(let i=1; i<=lines; i++) html += `<div>${i}</div>`;
+            lineNumbersElem.innerHTML = html;
+        };
+
+        window.syncScroll = function() {
+            document.getElementById('line-numbers').scrollTop = document.getElementById('gcode-input').scrollTop;
+        };
+
+        window.switchTab = function(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            const btns = document.querySelectorAll('.tab-btn');
+            if(tabId === 'main') btns[0].classList.add('active');
+            if(tabId === 'manual') btns[1].classList.add('active');
+            if(tabId === 'tools') btns[2].classList.add('active');
+        };
+        function init() {
+            if (isSystemLocked) return;
+
+            updateLineNumbers();
+
+            const container = document.getElementById('container');
+            const w = container.clientWidth || window.innerWidth;
+            const h = container.clientHeight || (window.innerHeight * 0.45);
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111111);
+
+            camera = new THREE.PerspectiveCamera(45, w / h, 1, 10000);
+            camera.position.set(200, 250, 250);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(w, h);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0x555555));
+            const dl = new THREE.DirectionalLight(0xffffff, 1);
+            dl.position.set(100, 200, 100);
+            scene.add(dl);
+
+            scene.add(new THREE.GridHelper(400, 40, 0x444444, 0x222222));
+            
+            machineGroup = new THREE.Group();
+            scene.add(machineGroup);
+            addStableAxes(machineGroup, 100); 
+
+            createToolRackVisuals();
+
+            gcodeGroup = new THREE.Group();
+            machineGroup.add(gcodeGroup);
+
+            createToolMesh(TOOLS[activeToolId].color); 
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            window.addEventListener('resize', onWindowResize);
+            
+            document.querySelectorAll('.step-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    jogStep = parseFloat(e.target.dataset.step);
+                });
+            });
+
+            ['x','y','z'].forEach(ax => {
+                document.getElementById('g54-'+ax).addEventListener('change', () => updateStateAndVisuals());
+            });
+
+            const tbody = document.getElementById('tool-list');
+            for(let t in TOOLS) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td><b>T${t}</b></td><td>${TOOLS[t].name}</td><td align="center"><div class="tool-color-box" style="background:${TOOLS[t].hex}"></div></td>`;
+                tbody.appendChild(tr);
+            }
+
+            requestAnimationFrame(animate);
+            setTimeout(() => runSimulation(false), 100);
+        }
+
+        function createToolRackVisuals() {
+            rackGroup = new THREE.Group();
+            const mcs = MAGAZINE_CENTER_MCS;
+            rackGroup.position.set(mcs.x, mcs.z, -mcs.y);
+            
+            const boxGeo = new THREE.BoxGeometry(40, 40, 40);
+            const boxMat = new THREE.MeshPhongMaterial({
+                color: 0x00ff00, opacity: 0.2, transparent: true, side: THREE.DoubleSide
+            });
+            const box = new THREE.Mesh(boxGeo, boxMat);
+            rackGroup.add(box);
+
+            const wireGeo = new THREE.EdgesGeometry(boxGeo);
+            const wireMat = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+            const wire = new THREE.LineSegments(wireGeo, wireMat);
+            rackGroup.add(wire);
+
+            const entryGeo = new THREE.BoxGeometry(5, 30, 30);
+            const entryMat = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true });
+            const entryMark = new THREE.Mesh(entryGeo, entryMat);
+            entryMark.position.x = 20; 
+            rackGroup.add(entryMark);
+
+            machineGroup.add(rackGroup);
+        }
+
+        function createToolMesh(color) {
+            if(toolMesh) gcodeGroup.remove(toolMesh);
+            const geo = new THREE.CylinderGeometry(1.5, 1.5, 20, 16);
+            geo.translate(0, 10, 0); 
+            const mat = new THREE.MeshPhongMaterial({ color: color });
+            toolMesh = new THREE.Mesh(geo, mat);
+            gcodeGroup.add(toolMesh);
+        }
+
+        function updateStateAndVisuals() {
+            const g54 = {
+                x: parseFloat(document.getElementById('g54-x').value) || 0,
+                y: parseFloat(document.getElementById('g54-y').value) || 0,
+                z: parseFloat(document.getElementById('g54-z').value) || 0
+            };
+
+            const abs = {
+                x: machinePos.x - g54.x,
+                y: machinePos.y - g54.y,
+                z: machinePos.z - g54.z
+            };
+
+            const rel = {
+                x: abs.x - relativeOffset.x,
+                y: abs.y - relativeOffset.y,
+                z: abs.z - relativeOffset.z
+            };
+
+            updateAxisDRO('x', machinePos.x, abs.x, rel.x);
+            updateAxisDRO('y', machinePos.y, abs.y, rel.y);
+            updateAxisDRO('z', machinePos.z, abs.z, rel.z);
+
+            gcodeGroup.position.set(g54.x, g54.z, -g54.y);
+            toolMesh.position.set(abs.x, abs.z, -abs.y);
+            
+            const tColor = (TOOLS[activeToolId] || TOOLS[99]).color;
+            toolMesh.material.color.setHex(tColor);
+        }
+
+        function updateAxisDRO(axis, mcs, abs, rel) {
+            document.getElementById(`dro-mcs-${axis}`).innerText = mcs.toFixed(3);
+            document.getElementById(`dro-abs-${axis}`).innerText = abs.toFixed(3);
+            document.getElementById(`dro-rel-${axis}`).innerText = rel.toFixed(3);
+        }
+
+        window.zeroRelative = function() {
+            const g54x = parseFloat(document.getElementById('g54-x').value) || 0;
+            const g54y = parseFloat(document.getElementById('g54-y').value) || 0;
+            const g54z = parseFloat(document.getElementById('g54-z').value) || 0;
+            
+            relativeOffset = {
+                x: machinePos.x - g54x,
+                y: machinePos.y - g54y,
+                z: machinePos.z - g54z
+            };
+            updateStateAndVisuals();
+        };
+
+        window.setG54FromCurrent = function() {
+            document.getElementById('g54-x').value = machinePos.x;
+            document.getElementById('g54-y').value = machinePos.y;
+            document.getElementById('g54-z').value = machinePos.z;
+            updateStateAndVisuals();
+        };
+
+        window.manualJog = function(axis, dir) {
+            isAnimating = false;
+            document.getElementById('msg-bar').innerText = "手動模式";
+            if(axis==='X') machinePos.x += dir*jogStep;
+            if(axis==='Y') machinePos.y += dir*jogStep;
+            if(axis==='Z') machinePos.z += dir*jogStep;
+            updateStateAndVisuals();
+        };
+
+        function parseGCode(code) {
+            const lines = code.split('\n');
+            const pos = [];
+            const col = [];
+            const metas = [];
+
+            const VALID_G_CODES = [0, 1, 2, 3, 4, 17, 18, 19, 20, 21, 28, 40, 49, 54, 80, 90, 91]; 
+            const VALID_M_CODES = [3, 4, 5, 6, 8, 9, 30]; 
+            const VALID_PARAMS = "XYZIJKFRST"; 
+
+            const g54 = {
+                x: parseFloat(document.getElementById('g54-x').value) || 0,
+                y: parseFloat(document.getElementById('g54-y').value) || 0,
+                z: parseFloat(document.getElementById('g54-z').value) || 0
+            };
+
+            const startAbs = { x: machinePos.x - g54.x, y: machinePos.y - g54.y, z: machinePos.z - g54.z };
+            const magCenterAbs = { x: MAGAZINE_CENTER_MCS.x - g54.x, y: MAGAZINE_CENTER_MCS.y - g54.y, z: MAGAZINE_CENTER_MCS.z - g54.z };
+            const magEntryAbs = { x: (MAGAZINE_CENTER_MCS.x + MAGAZINE_ENTRY_OFFSET) - g54.x, y: MAGAZINE_CENTER_MCS.y - g54.y, z: MAGAZINE_CENTER_MCS.z - g54.z };
+            const safeZAbs = MAGAZINE_CENTER_MCS.z - g54.z;
+
+            let state = {
+                x: startAbs.x, y: startAbs.y, z: startAbs.z,
+                tool: activeToolId, 
+                mode: 'G0',
+                g91: false,
+                plane: 17, 
+                unitScale: 1.0 
+            };
+
+            function addLinearMove(tx, ty, tz) {
+                let tInfo = TOOLS[state.tool] || TOOLS[99];
+                let drawColor = new THREE.Color(tInfo.color);
+                let dist = Math.sqrt((tx-state.x)**2 + (ty-state.y)**2 + (tz-state.z)**2);
+                let steps = Math.ceil(dist / 1.0); 
+                if(steps < 1) steps = 1;
+
+                let px=state.x, py=state.y, pz=state.z;
+                for(let i=1; i<=steps; i++) {
+                    let t = i/steps;
+                    let cx = px + (tx-px)*t;
+                    let cy = py + (ty-py)*t;
+                    let cz = pz + (tz-pz)*t;
+                    pos.push(cx, cz, -cy);
+                    col.push(drawColor.r, drawColor.g, drawColor.b);
+                    metas.push({x:cx, y:cy, z:cz, tool:state.tool});
+                }
+                state.x=tx; state.y=ty; state.z=tz;
+            }
+
+            function addArcMove(tx, ty, tz, centerParams, isCW) {
+                let tInfo = TOOLS[state.tool] || TOOLS[99];
+                let drawColor = new THREE.Color(tInfo.color);
+
+                let a1, a2, aLin;
+                let start1, start2, startLin;
+                let end1, end2, endLin;
+                let c1, c2; 
+
+                if (state.plane === 17) { // XY
+                    a1='x'; a2='y'; aLin='z';
+                    start1=state.x; start2=state.y; startLin=state.z;
+                    end1=tx; end2=ty; endLin=tz;
+                    c1=centerParams.I; c2=centerParams.J;
+                } else if (state.plane === 18) { // ZX
+                    a1='z'; a2='x'; aLin='y';
+                    start1=state.z; start2=state.x; startLin=state.y;
+                    end1=tz; end2=tx; endLin=ty;
+                    c1=centerParams.K; c2=centerParams.I;
+                } else if (state.plane === 19) { // YZ
+                    a1='y'; a2='z'; aLin='x';
+                    start1=state.y; start2=state.z; startLin=state.x;
+                    end1=ty; end2=tz; endLin=tx;
+                    c1=centerParams.J; c2=centerParams.K;
+                }
+
+                let centerX, centerY;
+                
+                if (centerParams.R !== undefined) {
+                    let r = centerParams.R;
+                    let dx = end1 - start1;
+                    let dy = end2 - start2;
+                    let d2 = dx*dx + dy*dy;
+                    let d = Math.sqrt(d2);
+                    
+                    if (Math.abs(r) < d/2 - 0.01) throw new Error("半徑太小，無法連接起點與終點");
+
+                    let h = Math.sqrt(Math.max(0, r*r - d2/4));
+                    let mx = (start1 + end1) / 2;
+                    let my = (start2 + end2) / 2;
+
+                    let sideX, sideY;
+                    if (isCW) { sideX = dy; sideY = -dx; } 
+                    else      { sideX = -dy; sideY = dx; } 
+
+                    if (r < 0) { sideX = -sideX; sideY = -sideY; }
+
+                    centerX = mx + sideX * (h / d);
+                    centerY = my + sideY * (h / d);
+
+                } else {
+                    centerX = start1 + (c1 || 0);
+                    centerY = start2 + (c2 || 0);
+                }
+
+                let startAngle = Math.atan2(start2 - centerY, start1 - centerX);
+                let endAngle = Math.atan2(end2 - centerY, end1 - centerX);
+
+                let diff = endAngle - startAngle;
+                if (isCW) {
+                    if (diff >= 0) diff -= 2 * Math.PI;
+                } else {
+                    if (diff <= 0) diff += 2 * Math.PI;
+                }
+
+                let radius = Math.sqrt((start1-centerX)**2 + (start2-centerY)**2);
+                let arcLen = Math.abs(diff * radius);
+                let steps = Math.ceil(arcLen / 1.0); 
+                if(steps < 1) steps = 1;
+
+                for(let i=1; i<=steps; i++) {
+                    let t = i/steps;
+                    let angle = startAngle + diff * t;
+                    
+                    let p1 = centerX + radius * Math.cos(angle);
+                    let p2 = centerY + radius * Math.sin(angle);
+                    let pLin = startLin + (endLin - startLin) * t;
+
+                    let cx, cy, cz;
+                    if (state.plane === 17) { cx=p1; cy=p2; cz=pLin; }
+                    else if (state.plane === 18) { cz=p1; cx=p2; cy=pLin; }
+                    else if (state.plane === 19) { cy=p1; cz=p2; cx=pLin; }
+
+                    pos.push(cx, cz, -cy);
+                    col.push(drawColor.r, drawColor.g, drawColor.b);
+                    metas.push({x:cx, y:cy, z:cz, tool:state.tool});
+                }
+                
+                state.x = tx; state.y = ty; state.z = tz;
+            }
+
+
+            pos.push(state.x, state.z, -state.y); 
+            let startCol = new THREE.Color((TOOLS[state.tool]||TOOLS[99]).color);
+            col.push(startCol.r, startCol.g, startCol.b); 
+            metas.push({x:state.x,y:state.y,z:state.z,tool:state.tool});
+
+            try {
+                lines.forEach((originalLine, lineIdx) => {
+                    const lineNum = lineIdx + 1;
+                    let cleanLine = originalLine.split(';')[0].trim().toUpperCase();
+                    if(!cleanLine) return;
+
+                    const tokenRegex = /([A-Z])([-+]?[0-9]*\.?[0-9]+)/g;
+                    const tokens = [];
+                    let match;
+                    let capturedLength = 0;
+                    
+                    while ((match = tokenRegex.exec(cleanLine)) !== null) {
+                        tokens.push({ char: match[1], val: parseFloat(match[2]), raw: match[0] });
+                        capturedLength += match[0].length;
+                    }
+
+                    const lineNoSpace = cleanLine.replace(/\s+/g, '');
+                    if (capturedLength !== lineNoSpace.length) {
+                        if (tokens.length === 0) throw new Error(`第 ${lineNum} 行: 無效的語句`);
+                        throw new Error(`第 ${lineNum} 行: 包含非法字符`);
+                    }
+
+                    let lineParams = {};
+                    let gCodes = [];
+                    let mCodes = [];
+
+                    tokens.forEach(token => {
+                        const L = token.char;
+                        const V = token.val;
+                        if (L === 'G') gCodes.push(V);
+                        else if (L === 'M') mCodes.push(V);
+                        else if (VALID_PARAMS.includes(L)) {
+                            if (lineParams[L] !== undefined) throw new Error(`第 ${lineNum} 行: 參數 "${L}" 重複`);
+                            lineParams[L] = V;
+                        } else throw new Error(`第 ${lineNum} 行: 不支援參數 "${L}"`);
+                    });
+
+                    gCodes.forEach(g => {
+                        if ([0, 1, 2, 3].includes(g)) state.mode = 'G' + g;
+                        if (g === 90) state.g91 = false;
+                        if (g === 91) state.g91 = true;
+                        if (g === 17) state.plane = 17;
+                        if (g === 18) state.plane = 18;
+                        if (g === 19) state.plane = 19;
+                        if (g === 20) state.unitScale = 25.4;
+                        if (g === 21) state.unitScale = 1.0;
+                    });
+
+                    mCodes.forEach(m => {
+                        if (m === 6) {
+                            if (lineParams.T === undefined) throw new Error(`第 ${lineNum} 行: M06 缺少 T`);
+                            const newTool = lineParams.T;
+                            if (!TOOLS[newTool]) throw new Error(`第 ${lineNum} 行: T${newTool} 未定義`);
+                            if (state.z < safeZAbs) addLinearMove(state.x, state.y, safeZAbs);
+                            addLinearMove(magEntryAbs.x, magEntryAbs.y, safeZAbs);
+                            addLinearMove(magCenterAbs.x, magCenterAbs.y, safeZAbs);
+                            state.tool = newTool;
+                            addLinearMove(magEntryAbs.x, magEntryAbs.y, safeZAbs);
+                        }
+                    });
+
+                    const isMotionMode = ['G0', 'G1', 'G2', 'G3'].includes(state.mode);
+                    const hasMoveParams = (lineParams.X!==undefined || lineParams.Y!==undefined || lineParams.Z!==undefined || lineParams.I!==undefined || lineParams.J!==undefined || lineParams.K!==undefined || lineParams.R!==undefined);
+                    
+                    if (isMotionMode && (hasMoveParams || gCodes.some(g => [0,1,2,3].includes(g)))) {
+                        
+                        let scale = state.unitScale;
+                        let targetX = (lineParams.X !== undefined) ? lineParams.X * scale : state.x;
+                        let targetY = (lineParams.Y !== undefined) ? lineParams.Y * scale : state.y;
+                        let targetZ = (lineParams.Z !== undefined) ? lineParams.Z * scale : state.z;
+
+                        if (state.g91) {
+                            if (lineParams.X !== undefined) targetX = state.x + lineParams.X * scale;
+                            if (lineParams.Y !== undefined) targetY = state.y + lineParams.Y * scale;
+                            if (lineParams.Z !== undefined) targetZ = state.z + lineParams.Z * scale;
+                        }
+
+                        if (state.mode === 'G0' || state.mode === 'G1') {
+                            addLinearMove(targetX, targetY, targetZ);
+                        } 
+                        else if (state.mode === 'G2' || state.mode === 'G3') {
+                            let centerParams = {
+                                I: (lineParams.I !== undefined) ? lineParams.I * scale : undefined,
+                                J: (lineParams.J !== undefined) ? lineParams.J * scale : undefined,
+                                K: (lineParams.K !== undefined) ? lineParams.K * scale : undefined,
+                                R: (lineParams.R !== undefined) ? lineParams.R * scale : undefined
+                            };
+                            addArcMove(targetX, targetY, targetZ, centerParams, state.mode === 'G2');
+                        }
+                    }
+                });
+
+                return { success: true, positions: new Float32Array(pos), colors: new Float32Array(col), metas: metas, count: pos.length/3 };
+            } catch (err) {
+                return { success: false, error: err.message };
+            }
+        }
+
+        window.runSimulation = function(anim) {
+            isAnimating = false;
+            document.getElementById('error-overlay').style.display = 'none';
+
+            const code = document.getElementById('gcode-input').value;
+            const result = parseGCode(code);
+
+            if(!result.success) {
+                document.getElementById('error-overlay').style.display = 'block';
+                document.getElementById('error-msg').innerText = result.error;
+                document.getElementById('msg-bar').innerText = "警告：程式已停止";
+                return;
+            }
+
+            pathData = result;
+            if(pathData.count === 0) return;
+
+            if(lineObj) gcodeGroup.remove(lineObj);
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(pathData.positions, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(pathData.colors, 3));
+            const mat = new THREE.LineBasicMaterial({ vertexColors: true, linewidth: 2 });
+            lineObj = new THREE.Line(geo, mat);
+            gcodeGroup.add(lineObj);
+            
+            updateStateAndVisuals();
+
+            if(anim) {
+                const sec = parseFloat(document.getElementById('anim-duration').value) || 5;
+                animDuration = sec * 1000;
+                animStartTime = performance.now();
+                isAnimating = true;
+                lineObj.geometry.setDrawRange(0, 0);
+                document.getElementById('msg-bar').innerText = "執行中...";
+            } else {
+                lineObj.geometry.setDrawRange(0, Infinity);
+                updateToolFromPath(pathData.count - 1);
+                document.getElementById('msg-bar').innerText = "執行完畢";
+            }
+        };
+
+        function updateToolFromPath(idx) {
+            if(!pathData || !pathData.metas[idx]) return;
+            const meta = pathData.metas[idx];
+            activeToolId = meta.tool;
+            const g54x = parseFloat(document.getElementById('g54-x').value) || 0;
+            const g54y = parseFloat(document.getElementById('g54-y').value) || 0;
+            const g54z = parseFloat(document.getElementById('g54-z').value) || 0;
+            machinePos = { x: meta.x + g54x, y: meta.y + g54y, z: meta.z + g54z };
+            const tColor = (TOOLS[activeToolId] || TOOLS[99]).color;
+            toolMesh.material.color.setHex(tColor);
+            updateStateAndVisuals();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            if(isAnimating && pathData) {
+                const now = performance.now();
+                const elapsed = now - animStartTime;
+                let progress = elapsed / animDuration;
+                if(progress > 1) {
+                    progress = 1;
+                    isAnimating = false;
+                    document.getElementById('msg-bar').innerText = "執行完畢";
+                }
+                const drawCount = Math.floor(pathData.count * progress);
+                lineObj.geometry.setDrawRange(0, drawCount);
+                if(drawCount > 0) updateToolFromPath(drawCount - 1);
+            }
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('container');
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        }
+
+        function addStableAxes(parent, size) {
+            const arr = [
+                {s:[0,0,0], e:[size,0,0], c:0xff4444},
+                {s:[0,0,0], e:[0,0,-size], c:0x44ff44},
+                {s:[0,0,0], e:[0,size,0], c:0x4444ff}
+            ];
+            arr.forEach(d => {
+                const g = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(...d.s), new THREE.Vector3(...d.e)
+                ]);
+                parent.add(new THREE.Line(g, new THREE.LineBasicMaterial({color:d.c})));
+            });
+        }
+    </script>
+</body>
+</html>

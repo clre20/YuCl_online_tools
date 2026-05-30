@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YuCl 線上工具 | GitHub 統計卡片</title>
+    <link rel="icon" type="image/png" href="/static/ico/YuCl64.png">
+    <script src="{{ url_for('static', filename='js/page_tracker.js') }}"></script>
+    <style>
+        /* 定義基礎變數 */
+        :root { 
+            --bg: #0f0f12; 
+            --text: #e0e0e0; 
+            --accent: #7aa2f7; 
+            --panel: rgba(255, 255, 255, 0.05); 
+            --border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.3);
+        }
+
+        body { 
+            background-color: var(--bg); 
+            color: var(--text); 
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            min-height: 100vh; 
+            margin: 0; 
+            padding: 20px; 
+            transition: all 0.5s ease;
+            box-sizing: border-box;
+        }
+
+        .container { 
+            background-color: var(--panel); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px);
+            padding: 2.5rem; 
+            border-radius: 20px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2); 
+            width: 100%; 
+            max-width: 550px; 
+            text-align: center; 
+            border: 1px solid var(--border); 
+            transition: all 0.3s ease;
+        }
+
+        h1 { 
+            color: var(--accent); 
+            margin: 0; 
+            font-weight: 800;
+            letter-spacing: 1px;
+            font-size: 24px;
+            transition: color 0.5s; 
+        }
+
+        /* 頂部控制列 */
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .dropdown { 
+            padding: 6px 10px;
+            background: var(--input-bg); 
+            border: 1px solid var(--border); 
+            color: var(--text); 
+            border-radius: 6px; 
+            font-size: 13px; 
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        .dropdown:focus { border-color: var(--accent); }
+        .dropdown option { background: #1a1b26; color: #fff; }
+
+        /* 輸入框與選單樣式 */
+        input { 
+            width: 100%; 
+            padding: 14px; 
+            margin-bottom: 1.2rem; 
+            background: var(--input-bg); 
+            border: 1px solid var(--border); 
+            color: var(--text); 
+            border-radius: 8px; 
+            font-size: 16px; 
+            outline: none;
+            box-sizing: border-box; 
+            transition: border-color 0.3s;
+        }
+        
+        input:focus { border-color: var(--accent); }
+
+        /* 風格選擇網格 */
+        .style-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); 
+            gap: 12px; 
+            margin-bottom: 25px; 
+        }
+
+        .style-option { 
+            padding: 12px 5px; 
+            border: 1px solid var(--border); 
+            border-radius: 10px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            font-size: 14px; 
+            font-weight: 500;
+            opacity: 0.7; 
+            background: var(--panel);
+        }
+
+        .style-option:hover { opacity: 1; transform: translateY(-2px); border-color: var(--accent); }
+        .style-option.active { border-color: var(--accent); background: var(--accent); color: #000; opacity: 1; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+        /* 預覽區塊 */
+        .preview-box { 
+            margin-bottom: 25px; 
+            border: 2px dashed var(--border); 
+            border-radius: 12px; 
+            padding: 15px; 
+            min-height: 180px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            background: rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .preview-box img { 
+            max-width: 100%; 
+            height: auto; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            border-radius: 10px; 
+            transition: transform 0.3s;
+        }
+        .preview-box img:hover { transform: scale(1.02); }
+
+        /* 產生按鈕 */
+        button { 
+            background: var(--accent); 
+            color: #000; 
+            padding: 14px 0; 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: 900; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            font-size: 18px; 
+            width: 100%; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        button:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+
+        .result-area { margin-top: 2rem; display: none; text-align: left; animation: slideUp 0.5s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .code-box { 
+            background: rgba(0, 0, 0, 0.4); 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-family: 'Consolas', monospace; 
+            word-break: break-all; 
+            color: var(--accent); 
+            cursor: pointer; 
+            border: 1px solid var(--border); 
+            font-size: 13px;
+            position: relative;
+        }
+        .code-box:hover { background: rgba(0, 0, 0, 0.5); }
+        .code-box::after {
+            content: "CLICK TO COPY";
+            position: absolute;
+            top: -10px; right: 10px;
+            background: var(--accent); color: #000;
+            font-size: 10px; padding: 2px 6px; border-radius: 4px;
+            font-weight: bold; opacity: 0; transition: opacity 0.2s;
+        }
+        .code-box:hover::after { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1 id="title">GitHub 統計卡片</h1>
+            <div class="controls">
+                <select id="size" class="dropdown">
+                    <option value="1">Size: 100%</option>
+                    <option value="1.25">Size: 125%</option>
+                    <option value="1.5">Size: 150%</option>
+                    <option value="0.75">Size: 75%</option>
+                </select>
+                <select id="lang" class="dropdown" onchange="changeLang()">  
+                    <option value="zh">🇹🇼 繁中</option>
+                    <option value="en">🇺🇸 EN</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="preview-box">
+            <img id="preview-img" src="" alt="Preview">
+        </div>
+        
+        <div class="style-grid" id="style-grid"></div>
+        
+        <input type="text" id="username" placeholder="Enter GitHub ID">
+        <button onclick="generate()" id="gen-btn">Generate</button>
+        
+        <div id="loading" style="display:none; margin-top:15px; font-weight:bold; color: var(--accent);">
+            <span style="display:inline-block; animation: spin 1s infinite;">⟳</span> <span id="load-text">Processing...</span>
+        </div>
+        
+        <div id="result" class="result-area">
+            <p style="font-size: 14px; opacity: 0.8; margin-bottom: 5px;" id="link-label">Markdown:</p>
+            <div class="code-box" id="markdown-code" onclick="copyCode()"></div>
+        </div>
+    </div>
+
+    <style> @keyframes spin { 100% { transform: rotate(360deg); } } </style>
+
+    <script>
+        const themes = {{ theme_config | tojson }};
+        let currentStyle = 'default';
+        let currentLang = 'en';
+
+        const ui_text = {
+            "zh": { 
+                title: "動GitHub 統計卡片", 
+                input: "輸入 GitHub ID", 
+                btn: "產生卡片", 
+                load: "正在生成中...", 
+                label: "點擊複製 Markdown:", 
+                size: "尺寸",
+                styles: {"default":"經典", "depth":"景深", "terminal":"終端機", "pixel":"像素", "glass":"玻璃"} 
+            },
+            "en": { 
+                title: "GitHub 統計卡片", 
+                input: "GitHub ID", 
+                btn: "Generate Card", 
+                load: "Generating...", 
+                label: "Copy Markdown:", 
+                size: "Size",
+                styles: {"default":"Classic", "depth":"Depth", "terminal":"Terminal", "pixel":"Pixel", "glass":"Glass"} 
+            }
+        };
+        
+        window.onload = function() {
+            renderStyleButtons();
+            changeLang(); 
+        };
+
+        function changeLang() {
+            currentLang = document.getElementById('lang').value;
+            const t = ui_text[currentLang];
+            
+            document.getElementById('title').innerText = t.title;
+            document.getElementById('username').placeholder = t.input;
+            document.getElementById('gen-btn').innerText = t.btn;
+            document.getElementById('load-text').innerText = t.load;
+            document.getElementById('link-label').innerText = t.label;
+            
+            // 更新尺寸選單文字
+            const sizeSelect = document.getElementById('size');
+            const sizes = ["100%", "125%", "150%", "75%"];
+            const values = ["1", "1.25", "1.5", "0.75"];
+            for(let i=0; i<sizeSelect.options.length; i++) {
+                sizeSelect.options[i].text = `${t.size}: ${sizes[i]}`;
+            }
+
+            for (const [key, val] of Object.entries(t.styles)) {
+                const btn = document.getElementById('btn-' + key);
+                if(btn) btn.innerText = val;
+            }
+            refreshPreview();
+        }
+
+        function renderStyleButtons() {
+            const grid = document.getElementById('style-grid');
+            grid.innerHTML = '';
+            for (const [key, val] of Object.entries(themes)) {
+                const div = document.createElement('div');
+                div.className = (key === 'default' ? 'style-option active' : 'style-option');
+                div.id = 'btn-' + key;
+                div.innerText = key; 
+                div.onclick = () => selectStyle(key);
+                grid.appendChild(div);
+            }
+        }
+
+        function selectStyle(style) {
+            currentStyle = style;
+            document.querySelectorAll('.style-option').forEach(el => el.classList.remove('active'));
+            document.getElementById('btn-' + style).classList.add('active');
+            
+            const t = themes[style];
+            const root = document.documentElement;
+            root.style.setProperty('--bg', t.ui_bg);
+            root.style.setProperty('--text', t.ui_text);
+            root.style.setProperty('--accent', t.ui_accent);
+            root.style.setProperty('--panel', t.ui_panel);
+            root.style.setProperty('--border', t.ui_border);
+            root.style.setProperty('--input-bg', t.ui_input);
+
+            refreshPreview();
+        }
+
+        function refreshPreview() {
+            // 預覽時不使用 zoom 參數，讓預覽圖保持適合盒子的大小 (CSS會控制)
+            const ts = new Date().getTime();
+            const img = document.getElementById('preview-img');
+            img.style.opacity = 0.5;
+            setTimeout(() => { 
+                img.src = `/api/github_stats/sample?style=${currentStyle}&lang=${currentLang}&v=${ts}`; 
+                img.onload = () => { img.style.opacity = 1; }; 
+            }, 100);
+        }
+
+        async function generate() {
+            const user = document.getElementById('username').value.trim();
+            const zoom = document.getElementById('size').value;
+            
+            if(!user) return alert("Please enter a username!");
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('gen-btn').disabled = true;
+            document.getElementById('gen-btn').style.opacity = 0.7;
+
+            try {
+                const res = await fetch('/api/github_stats/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username: user})
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    const ts = new Date().getTime();
+                    // 實際圖片連結帶上 zoom 參數
+                    const imgUrl = `${window.location.origin}/api/github_stats?username=${user}&style=${currentStyle}&lang=${currentLang}&zoom=${zoom}&v=${ts}`;
+                    document.getElementById('preview-img').src = imgUrl;
+                    
+                    let linkParam = `?username=${user}&style=${currentStyle}`;
+                    if(currentLang !== 'en') linkParam += `&lang=${currentLang}`;
+                    if(zoom !== '1') linkParam += `&zoom=${zoom}`;
+                    
+                    const cleanUrl = `${window.location.origin}/api/github_stats${linkParam}`;
+                    document.getElementById('markdown-code').innerText = `[![My Stats](${cleanUrl})](https://github.com/${user})`;
+                    document.getElementById('result').style.display = 'block';
+                } else { 
+                    alert("Error: " + (data.message || "User not found")); 
+                }
+            } catch(e) { 
+                alert("Connection Error. Please try again."); 
+            }
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('gen-btn').disabled = false;
+            document.getElementById('gen-btn').style.opacity = 1;
+        }
+
+        function copyCode() {
+            const codeBox = document.getElementById('markdown-code');
+            navigator.clipboard.writeText(codeBox.innerText);
+            const originalBg = codeBox.style.backgroundColor;
+            codeBox.style.backgroundColor = "rgba(122, 162, 247, 0.3)";
+            setTimeout(() => { codeBox.style.backgroundColor = originalBg; }, 200);
+        }
+    </script>
+</body>
+</html>

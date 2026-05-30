@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YuCl 線上工具 | YouTube 下載</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='ico/YuCl64.png') }}">
+    <meta name="description" content="YuCl YouTube 下載工具，支援轉換下載 MP3 音訊與 MP4 影片">
+    
+    <!-- Fonts and Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <script src="{{ url_for('static', filename='js/page_tracker.js') }}"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-glow: rgba(37, 99, 235, 0.4);
+            --accent-cyan: #06b6d4;
+            --accent-cyan-glow: rgba(6, 182, 212, 0.4);
+            --bg-dark: #090d16;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        /* --- 定製捲軸 (Scrollbar) --- */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.15);
+            background-clip: content-box;
+        }
+
+        /* Firefox 支援 */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+            height: 100vh;
+            height: 100dvh;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 80px 24px 40px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body.converting {
+            animation-duration: 1.5s; /* 加快色彩變換速度至 1.5 秒 (再快2倍) */
+        }
+
+        body.converting .card {
+            background: rgba(0, 0, 0, 0.8) !important; /* 下載時卡片變為更深的黑色半透明 */
+            border-color: rgba(6, 182, 212, 0.3); /* 同步強化邊框感 */
+        }
+
+        /* Dark Fog Overlay Layer on Top of Shifting Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(9, 13, 22, 0.45) 0%, rgba(9, 13, 22, 0.88) 100%);
+            z-index: 0;
+            pointer-events: none;
+            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* 平滑淡入淡出 */
+            opacity: 1;
+        }
+
+        /* 執行下載轉換時，暫時淡出移除黑霧 */
+        body.converting::before {
+            opacity: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 2.5rem;
+            padding: 20px;
+            z-index: 1;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--card-border);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            height: 680px; /* 統一卡片高度 */
+            max-height: calc(100vh - 120px);
+            max-height: calc(100dvh - 120px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 使用內部捲軸 */
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 表單區域滾動優化 */
+        #ytdl-form {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #ytdl-form::-webkit-scrollbar, .history-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #ytdl-form::-webkit-scrollbar-track, .history-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        #ytdl-form::-webkit-scrollbar-thumb, .history-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+
+        #ytdl-form::-webkit-scrollbar-thumb:hover, .history-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+            background-clip: content-box;
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.25);
+        }
+
+        h1 i {
+            color: #ef4444; /* YouTube play icon red */
+        }
+
+        h1 .title-youtube {
+            color: #ffffff; /* Make the "YouTube" brand text white */
+        }
+
+        h1 .title-downloader {
+            background: linear-gradient(135deg, #3b82f6, #06b6d4, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 16px;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            transition: color 0.3s;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 14px 16px 14px 48px;
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            background: rgba(0, 0, 0, 0.25);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        /* For selects that don't need left padding padding-left 48px as they might have icons */
+        .form-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            background-size: 18px;
+            padding-right: 40px;
+        }
+
+        .form-group input::placeholder {
+            color: #555c68;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 0, 0, 0.35);
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+        }
+
+        .form-group input:focus + i, .input-wrapper:focus-within i {
+            color: var(--accent-cyan);
+        }
+
+
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(6, 182, 212, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .submit-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            background: #2e3542;
+            color: #6b7280;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Live Status Indicator Box */
+        .status-box {
+            margin-top: 1.5rem;
+            padding: 16px;
+            border-radius: 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-align: center;
+            animation: pulseBg 2s infinite alternate;
+        }
+
+        @keyframes pulseBg {
+            0% { border-color: rgba(255, 255, 255, 0.05); }
+            100% { border-color: rgba(6, 182, 212, 0.2); }
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .history-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%; /* 使用父卡片的固定高度 */
+        }
+
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 1rem;
+        }
+
+        .history-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .clear-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .clear-btn:hover {
+            color: #ef4444;
+        }
+
+        .history-list {
+            list-style: none;
+            overflow-y: auto;
+            flex-grow: 1;
+            padding-right: 5px;
+        }
+
+        .empty-history {
+            text-align: center;
+            color: var(--text-muted);
+            margin: auto 0;
+            padding: 40px 0;
+            font-size: 0.95rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .empty-history i {
+            font-size: 2.5rem;
+            color: rgba(255, 255, 255, 0.1);
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 14px 18px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateX(3px);
+        }
+
+        .item-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 0;
+            margin-right: 15px;
+        }
+
+        .item-info > div {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .item-info i {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .item-info i.fa-music {
+            color: var(--accent-cyan);
+        }
+
+        .item-info i.fa-video {
+            color: #f43f5e;
+        }
+
+        .item-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .item-actions a {
+            text-decoration: none;
+            background: rgba(37, 99, 235, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .item-actions a:hover {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .item-actions button {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .item-actions button:hover {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Back to Home Button */
+        .back-to-home {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.3s;
+            z-index: 10;
+        }
+
+        .back-to-home:hover {
+            color: var(--text-main);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                justify-content: flex-start;
+                padding: 16px 12px;
+                overflow-y: auto;
+                height: auto;
+                min-height: 100vh;
+                min-height: 100dvh;
+            }
+            .container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                padding: 0;
+                overflow-y: visible;
+                max-height: none;
+            }
+            .card {
+                height: auto; /* 手機版自適應高度，不設固定 600px */
+                max-height: none;
+                overflow: visible;
+            }
+            .history-container {
+                max-height: 500px; /* 手機版限制歷史紀錄高度，避免過長 */
+                overflow-y: auto;
+            }
+            .back-to-home {
+                position: relative;
+                top: 0;
+                left: 0;
+                margin-bottom: 1rem;
+                align-self: flex-start;
+                font-size: 0.85rem;
+                flex-shrink: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-to-home" id="home-link">
+        <i class="fas fa-arrow-left"></i>
+        <span>返回首頁</span>
+    </a>
+
+    <div class="container">
+        <!-- Downloader Card -->
+        <div class="card" id="downloader-card">
+            <div class="header-section">
+                <h1><span class="title-youtube">YouTube</span> <span class="title-downloader">下載器</span></h1>
+                <p class="subtitle">輸入連結即可下載高品質 MP3 音訊或 MP4 影片</p>
+            </div>
+
+            <form id="ytdl-form">
+                <!-- Video URL Input -->
+                <div class="form-group">
+                    <label for="video_url">影片連結</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-link"></i>
+                        <input type="url" id="video_url" name="video_url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off">
+                    </div>
+                </div>
+
+                <!-- Custom Save Filename -->
+                <div class="form-group">
+                    <label for="output_filename">自訂儲存檔名 (選填)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-file-signature"></i>
+                        <input type="text" id="output_filename" name="output_filename" placeholder="保留空白則使用影片原標題...">
+                    </div>
+                </div>
+
+                <!-- Download Type Select (MP3 or MP4) -->
+                <div class="form-group">
+                    <label for="download_type">下載格式</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-file-import"></i>
+                        <select id="download_type" name="download_type">
+                            <option value="mp3" selected>🎵 MP3 音訊</option>
+                            <option value="mp4">🎥 MP4 影片</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Audio Quality Selection (shown conditionally) -->
+                <div class="form-group" id="quality-container">
+                    <label for="quality">音訊品質 / 格式</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-sliders-h"></i>
+                        <select id="quality" name="quality">
+                            <option value="mp3-320" selected>MP3 - 320 kbps (極高音質)</option>
+                            <option value="mp3-256">MP3 - 256 kbps (高音質)</option>
+                            <option value="mp3-192">MP3 - 192 kbps (標準音質)</option>
+                            <option value="mp3-128">MP3 - 128 kbps (低空間佔用)</option>
+                            <option value="flac">FLAC - 無損音質</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="form-group" style="margin-bottom: 0; margin-top: 1.25rem;">
+                    <button type="submit" id="submit-btn" class="submit-btn">
+                        <i class="fas fa-cloud-download-alt"></i>
+                        <span>開始分析與下載</span>
+                    </button>
+                </div>
+
+                <!-- Status Polling Box -->
+                <div id="status-box" class="status-box">
+                    <div class="spinner"></div>
+                    <span id="status-text">正在初始化下載任務...</span>
+                </div>
+            </form>
+        </div>
+
+        <!-- Download History Card -->
+        <div class="card history-container">
+            <div class="history-header">
+                <h2><i class="fas fa-history"></i> 下載紀錄</h2>
+                <button id="clear-history" class="clear-btn" style="display: none;">清除紀錄</button>
+            </div>
+            
+            <div id="empty-history" class="empty-history">
+                <i class="fas fa-folder-open"></i>
+                <p>尚無下載紀錄，開始下載後會顯示在此處</p>
+            </div>
+
+            <ul class="history-list" id="history-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('ytdl-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const statusBox = document.getElementById('status-box');
+        const statusText = document.getElementById('status-text');
+        const downloadTypeSelect = document.getElementById('download_type');
+        const qualityContainer = document.getElementById('quality-container');
+        const historyList = document.getElementById('history-list');
+        const emptyHistory = document.getElementById('empty-history');
+        const clearHistoryBtn = document.getElementById('clear-history');
+
+        const qualitySelect = document.getElementById('quality');
+        const qualityLabel = document.querySelector('label[for="quality"]');
+
+        const mp3Options = `
+            <option value="mp3-320" selected>MP3 - 320 kbps (極高音質)</option>
+            <option value="mp3-256">MP3 - 256 kbps (高音質)</option>
+            <option value="mp3-192">MP3 - 192 kbps (標準音質)</option>
+            <option value="mp3-128">MP3 - 128 kbps (低空間佔用)</option>
+            <option value="flac">FLAC - 無損音質</option>
+        `;
+
+        const mp4Options = `
+            <option value="mp4-best" selected>最高畫質 (無限制)</option>
+            <option value="mp4-4k">4K (2160p Ultra HD)</option>
+            <option value="mp4-2k">2K (1440p Quad HD)</option>
+            <option value="mp4-1080p">1080p (Full HD)</option>
+            <option value="mp4-720p">720p (HD)</option>
+            <option value="mp4-480p">480p (SD)</option>
+            <option value="mp4-360p">360p (手機畫質)</option>
+        `;
+
+        // Dynamic Options update based on format choice
+        downloadTypeSelect.addEventListener('change', function() {
+            if (this.value === 'mp3') {
+                qualityLabel.innerText = '音訊品質 / 格式';
+                qualitySelect.innerHTML = mp3Options;
+            } else {
+                qualityLabel.innerText = '影片解析度 / 畫質';
+                qualitySelect.innerHTML = mp4Options;
+            }
+        });
+
+        // Load history from localStorage
+        let localHistory = JSON.parse(localStorage.getItem('ytdl_history') || '[]');
+        renderHistory();
+        downloadTypeSelect.dispatchEvent(new Event('change'));
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            document.body.classList.add('converting');
+            
+            // Set UI to loading/processing state
+            submitBtn.disabled = true;
+            submitBtn.querySelector('span').innerText = '下載排隊中...';
+            statusBox.style.display = 'flex';
+            statusText.innerText = '正在向伺服器提交下載請求...';
+            statusText.style.color = '#f3f4f6';
+
+            try {
+                const response = await fetch('/api/ytdl/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.status !== 'accepted') {
+                    throw new Error(data.message || '請求提交失敗');
+                }
+
+                const taskId = data.task_id;
+                
+                // Polling loop
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const statusRes = await fetch(`/api/ytdl/status/${taskId}`);
+                        if (statusRes.status === 404) {
+                            clearInterval(pollInterval);
+                            showError('任務已被伺服器清除或已過期');
+                            return;
+                        }
+
+                        const statusData = await statusRes.json();
+
+                        if (statusData.status === 'waiting') {
+                            statusText.innerText = `排隊中... 目前前方還有 ${statusData.queue_position} 人`;
+                            statusText.style.color = '#eab308'; // Warning gold color
+                        } 
+                        else if (statusData.status === 'processing') {
+                            statusText.innerText = '伺服器正在下載影片與轉檔中，請稍候...';
+                            statusText.style.color = '#06b6d4'; // Cyan processing color
+                        }
+                        else if (statusData.status === 'finished') {
+                            clearInterval(pollInterval);
+                            statusText.innerText = '轉換與下載成功！';
+                            statusText.style.color = '#10b981'; // Success green color
+                            
+                            // Save to local history
+                            const isAudio = downloadTypeSelect.value === 'mp3';
+                            saveHistoryItem(statusData.file, statusData.download_url, isAudio);
+                            
+                            setTimeout(() => {
+                                statusBox.style.display = 'none';
+                                submitBtn.disabled = false;
+                                submitBtn.querySelector('span').innerText = '開始分析與下載';
+                                form.reset();
+                                // Trigger change to keep field toggle correct
+                                downloadTypeSelect.dispatchEvent(new Event('change'));
+                                document.body.classList.remove('converting');
+                            }, 3000);
+                        }
+                        else if (statusData.status === 'error') {
+                            clearInterval(pollInterval);
+                            showError(statusData.message || '下載處理出錯');
+                        }
+                    } catch (err) {
+                        console.error('輪詢失敗:', err);
+                    }
+                }, 2000);
+
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        function showError(message) {
+            statusText.innerText = `錯誤: ${message}`;
+            statusText.style.color = '#ef4444'; // Red error color
+            submitBtn.disabled = false;
+            submitBtn.querySelector('span').innerText = '開始分析與下載';
+            document.body.classList.remove('converting');
+        }
+
+        function saveHistoryItem(filename, downloadUrl, isAudio) {
+            // Avoid duplicate items
+            if (!localHistory.some(item => item.filename === filename)) {
+                localHistory.unshift({
+                    filename,
+                    downloadUrl,
+                    isAudio,
+                    timestamp: new Date().toLocaleString()
+                });
+                localStorage.setItem('ytdl_history', JSON.stringify(localHistory));
+                renderHistory();
+            }
+        }
+
+        function renderHistory() {
+            historyList.innerHTML = '';
+            
+            if (localHistory.length === 0) {
+                emptyHistory.style.display = 'flex';
+                clearHistoryBtn.style.display = 'none';
+                return;
+            }
+
+            emptyHistory.style.display = 'none';
+            clearHistoryBtn.style.display = 'block';
+
+            localHistory.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'history-item';
+                
+                const iconClass = item.isAudio ? 'fas fa-music' : 'fas fa-video';
+                
+                li.innerHTML = `
+                    <div class="item-info">
+                        <i class="${iconClass}"></i>
+                        <div>
+                            <div class="item-title" title="${item.filename}">${item.filename}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">${item.timestamp}</div>
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <a href="${item.downloadUrl}" download id="download-${index}">
+                            <i class="fas fa-download"></i>下載
+                        </a>
+                        <button onclick="deleteHistoryItem(${index})" id="delete-${index}" title="刪除紀錄">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+                historyList.appendChild(li);
+            });
+        }
+
+        window.deleteHistoryItem = function(index) {
+            localHistory.splice(index, 1);
+            localStorage.setItem('ytdl_history', JSON.stringify(localHistory));
+            renderHistory();
+        };
+
+        clearHistoryBtn.addEventListener('click', function() {
+            if (confirm('確定要清除所有下載紀錄嗎？')) {
+                localHistory = [];
+                localStorage.removeItem('ytdl_history');
+                renderHistory();
+            }
+        });
+    </script>
+</body>
+</html>

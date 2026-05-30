@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>YuCl 週報表</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; color: #333; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 30px; text-align: center; color: white; }
+        .content { padding: 30px; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 25px; }
+        .box { width: 48%; background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #edf2f7; }
+        .num { font-size: 28px; font-weight: 800; color: #0d6efd; }
+        .label { font-size: 13px; color: #718096; font-weight: bold; margin-bottom: 5px; }
+        h3 { border-left: 5px solid #0d6efd; padding-left: 15px; margin-top: 40px; color: #2d3748; font-size: 18px; }
+        img { max-width: 100%; height: auto; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 15px; background: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff; border-radius: 8px; overflow: hidden; }
+        td, th { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; text-align: left; font-size: 14px; }
+        th { background-color: #f8fafc; color: #64748b; font-weight: bold; }
+        .footer { background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; }
+        .btn-login { display: inline-block; background: #0d6efd; color: white !important; padding: 12px 30px; text-decoration: none; border-radius: 30px; font-weight: bold; margin-top: 30px; box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2 style="margin:0; letter-spacing: 2px;">YuCl 系統週報表</h2>
+            <p style="margin:8px 0 0 0; opacity:0.9; font-size: 14px;">統計區間：{{ start_date }} ~ {{ end_date }}</p>
+        </div>
+
+        <div class="content">
+            <div class="row">
+                <div class="box">
+                    <div class="label">歷史總訪問</div>
+                    <div class="num">{{ total_visits_all }}</div>
+                </div>
+                <div class="box">
+                    <div class="label">歷史總獨立位址</div>
+                    <div class="num" style="color:#1a7f37">{{ total_ips_all }}</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="box" style="background:#f0f7ff; border-color: #dbeafe;">
+                    <div class="label" style="color: #0d6efd;">本週新增訪問</div>
+                    <div class="num">{{ week_visits }}</div>
+                </div>
+                <div class="box" style="background:#f0fdf4; border-color: #dcfce7;">
+                    <div class="label" style="color: #1a7f37;">本週新增 IP</div>
+                    <div class="num" style="color:#1a7f37">{{ week_unique_ips }}</div>
+                </div>
+            </div>
+
+            <h3>📈 本週流量趨勢</h3>
+            <img src="{{ line_chart_url }}" alt="流量趨勢圖">
+
+            <h3>🌍 訪客地區分佈 (TOP 5)</h3>
+            <img src="{{ pie_chart_url }}" alt="地區分佈圖">
+
+            <h3>🔥 本週熱門頁面</h3>
+            <img src="{{ bar_chart_url }}" alt="路徑圖">
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>訪問路徑</th>
+                        <th style="text-align:right;">點擊次數</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for path, count in top_paths %}
+                    <tr>
+                        <td style="color: #4a5568;">{{ path }}</td>
+                        <td style="text-align:right; color: #2d3748;"><b>{{ count }}</b></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div style="text-align: center;">
+                <a href="https://www.yucl.qzz.io/admin" class="btn-login">進入管理後台</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>本報表由 YuCl 自動排程系統生成</p>
+            <p>此為系統自動發送郵件，請勿直接回覆</p>
+            <p>&copy; 2026 YuCl 新系統. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

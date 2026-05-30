@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YuCl 線上工具 | 短網址產生器</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='ico/YuCl64.png') }}">
+    <meta name="description" content="YuCl 短網址產生器，提供快速縮短網址、自訂別名、過期時間設定與點擊流量統計服務">
+    
+    <!-- Fonts and Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+TC:wght@300;400;700;900&display=swap" rel="stylesheet">
+    
+    <script src="{{ url_for('static', filename='js/page_tracker.js') }}"></script>
+
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.4);
+            --accent-cyan: #06b6d4;
+            --bg-dark: #090d16;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- Scrollbar --- */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.1) transparent; }
+
+        body {
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+            height: 100vh;
+            height: 100dvh;
+            background: linear-gradient(-45deg, #1e1b4b, #311042, #083344, #111827);
+            background-size: 400% 400%;
+            animation: gradientAnim 15s ease infinite;
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 80px 24px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes gradientAnim {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body::before {
+            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(9, 13, 22, 0.3) 0%, rgba(9, 13, 22, 0.85) 100%);
+            z-index: 0; pointer-events: none;
+        }
+
+        .container { width: 100%; max-width: 720px; z-index: 1; display: flex; flex-direction: column; gap: 2rem; }
+
+        .back-to-home { position: absolute; top: 24px; left: 24px; color: var(--text-muted); text-decoration: none; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; transition: var(--transition); z-index: 10; }
+        .back-to-home:hover { color: var(--text-main); transform: translateX(-3px); }
+
+        .card {
+            background: var(--card-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border-radius: 28px; padding: 3rem; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--card-border); transition: var(--transition);
+            max-height: calc(100vh - 120px);
+            max-height: calc(100dvh - 120px);
+            overflow-y: auto;
+        }
+        .card:hover { border-color: rgba(255, 255, 255, 0.15); box-shadow: 0 35px 70px rgba(0, 0, 0, 0.6); }
+
+        .header-section { text-align: center; margin-bottom: 2.5rem; }
+        h1 { font-size: 2.4rem; font-weight: 900; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 12px; }
+        h1 i { color: var(--accent-cyan); }
+        .title-brand { color: #ffffff; }
+        .title-accent { background: linear-gradient(135deg, #00d2ff, #9d50bb, #ff00c8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p.subtitle { color: var(--text-muted); font-size: 1rem; }
+
+        .form-group { margin-bottom: 1.8rem; display: flex; flex-direction: column; gap: 8px; }
+        label { font-size: 0.95rem; font-weight: 600; color: #e5e7eb; display: flex; align-items: center; gap: 8px; }
+        label i { color: var(--primary); }
+
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        .input-wrapper i.prefix-icon { position: absolute; left: 18px; color: var(--text-muted); font-size: 1.1rem; pointer-events: none; }
+        
+        input[type="text"], input[type="url"], input[type="datetime-local"] { 
+            width: 100%; padding: 16px 18px 16px 48px; border: 1px solid var(--card-border); 
+            border-radius: 16px; background: rgba(0, 0, 0, 0.3); color: white; font-size: 1rem; 
+            outline: none; transition: var(--transition); 
+        }
+        input[type="text"]:focus, input[type="url"]:focus, input[type="datetime-local"]:focus { 
+            border-color: var(--accent-cyan); background: rgba(0, 0, 0, 0.45); 
+            box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.15); 
+        }
+
+        .expiration-helper { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+        .helper-btn { 
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-border); 
+            border-radius: 8px; padding: 6px 12px; color: var(--text-muted); font-size: 0.8rem; 
+            cursor: pointer; transition: var(--transition); 
+        }
+        .helper-btn:hover { background: rgba(139, 92, 246, 0.15); border-color: var(--primary); color: white; }
+        .helper-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+        .submit-btn { 
+            width: 100%; padding: 18px; border: none; border-radius: 16px; font-size: 1.15rem; 
+            font-weight: 800; cursor: pointer; background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%); 
+            color: white; box-shadow: 0 4px 20px rgba(139, 92, 246, 0.35); transition: var(--transition); 
+            display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 1rem; 
+        }
+        .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(6, 182, 212, 0.45); filter: brightness(1.1); }
+        .submit-btn:active { transform: translateY(1px); }
+
+        /* 結果展示區域 */
+        .result-card {
+            background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.2);
+            border-radius: 20px; padding: 24px; margin-top: 2rem; display: none;
+            animation: slideDown 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .result-title { font-size: 1.2rem; font-weight: 700; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        
+        .result-url-display {
+            background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px; padding: 14px 18px; display: flex; align-items: center;
+            justify-content: space-between; gap: 12px; margin-bottom: 16px;
+        }
+        .result-url-display span.short-url {
+            color: white; font-weight: 700; font-size: 1.1rem; word-break: break-all; font-family: monospace;
+        }
+        
+        .action-buttons { display: flex; gap: 12px; }
+        .btn-action {
+            flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--card-border);
+            background: rgba(255, 255, 255, 0.05); color: white; font-size: 0.95rem; font-weight: 600;
+            cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-action.primary { background: var(--primary); border-color: var(--primary); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25); }
+        .btn-action.primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-action:not(.primary):hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
+
+        .qr-section { display: none; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed rgba(255, 255, 255, 0.1); animation: fadeIn 0.4s ease; }
+        .qr-image { width: 150px; height: 150px; border-radius: 12px; border: 4px solid white; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+
+        /* 歷史記錄區域 */
+        .history-section { display: none; margin-top: 2.5rem; animation: fadeIn 0.6s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .history-title { font-size: 1.25rem; font-weight: 700; color: white; display: flex; align-items: center; gap: 8px; }
+        .clear-history-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; transition: var(--transition); }
+        .clear-history-btn:hover { color: #f87171; }
+
+        .history-list { display: flex; flex-direction: column; gap: 12px; max-height: 300px; overflow-y: auto; padding-right: 4px; }
+        
+        .history-item {
+            background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border);
+            border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px;
+            transition: var(--transition);
+        }
+        .history-item:hover { background: rgba(255, 255, 255, 0.05); transform: translateX(3px); border-color: rgba(255, 255, 255, 0.12); }
+        
+        .history-item-header { display: flex; justify-content: space-between; align-items: center; }
+        .history-short { font-weight: 700; color: var(--accent-cyan); font-family: monospace; font-size: 1.05rem; text-decoration: none; }
+        .history-short:hover { text-decoration: underline; }
+        
+        .history-item-actions { display: flex; gap: 8px; }
+        .history-btn { background: rgba(255,255,255,0.05); border: none; color: var(--text-muted); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition); }
+        .history-btn:hover { background: var(--primary); color: white; }
+        .history-btn.delete-btn:hover { background: #ef4444; color: white; }
+
+        .history-long { font-size: 0.85rem; color: var(--text-muted); word-break: break-all; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .history-meta { display: flex; gap: 12px; font-size: 0.75rem; color: #6b7280; }
+        .history-meta span { display: flex; align-items: center; gap: 4px; }
+
+        /* Toast 提示 */
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+            background: rgba(139, 92, 246, 0.95); backdrop-filter: blur(10px);
+            color: white; padding: 12px 24px; border-radius: 12px; font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; align-items: center; gap: 8px; pointer-events: none;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* 手機畫面專門處理 (Mobile Optimization) */
+        @media (max-width: 576px) {
+            body {
+                flex-direction: column;
+                justify-content: flex-start;
+                padding: 16px 12px;
+                overflow: hidden;
+                height: 100vh;
+                height: 100dvh;
+            }
+            .container {
+                width: 100%;
+                gap: 0;
+            }
+            .back-to-home {
+                position: static;
+                margin-bottom: 12px;
+                align-self: flex-start;
+                font-size: 0.85rem;
+                flex-shrink: 0;
+            }
+            .card {
+                padding: 1.5rem;
+                border-radius: 20px;
+                max-height: calc(100vh - 90px);
+                max-height: calc(100dvh - 90px);
+                overflow-y: auto;
+            }
+            .header-section {
+                margin-bottom: 1.5rem;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+            p.subtitle {
+                font-size: 0.85rem;
+            }
+            .form-group {
+                margin-bottom: 1.2rem;
+            }
+            input[type="text"], input[type="url"] {
+                padding: 12px 14px 12px 42px;
+                font-size: 0.95rem;
+            }
+            .input-wrapper i.prefix-icon {
+                left: 14px;
+                font-size: 1rem;
+            }
+            .submit-btn {
+                padding: 14px;
+                font-size: 1rem;
+                margin-top: 0.5rem;
+            }
+            .result-card {
+                padding: 16px;
+                margin-top: 1.2rem;
+            }
+            .result-url-display {
+                padding: 10px 12px;
+                font-size: 0.95rem;
+            }
+            .result-url-display span.short-url {
+                font-size: 0.95rem;
+            }
+            .action-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .btn-action {
+                width: 100%;
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+            .history-section {
+                margin-top: 1.8rem;
+            }
+            .history-title {
+                font-size: 1.1rem;
+            }
+            .clear-history-btn {
+                font-size: 0.75rem;
+            }
+            .history-item {
+                padding: 12px;
+                border-radius: 10px;
+            }
+            .history-short {
+                font-size: 0.95rem;
+            }
+            .history-long {
+                font-size: 0.75rem;
+            }
+            .history-meta {
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <a href="/" class="back-to-home"><i class="fas fa-arrow-left"></i> 回首頁</a>
+
+    <div class="container">
+        <div class="card">
+            <div class="header-section">
+                <h1>
+                    <span class="title-brand">YuCl</span> <span class="title-accent">短網址產生器</span>
+                </h1>
+                <p class="subtitle">極速縮短長連結，支援自訂別名與一年的過期防護</p>
+            </div>
+
+            <form id="shortenForm" onsubmit="handleShorten(event)">
+                <!-- 長網址 -->
+                <div class="form-group">
+                    <label for="longUrl"><i class="fas fa-globe"></i> 目標長網址 *</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-link prefix-icon"></i>
+                        <input type="url" id="longUrl" placeholder="https://example.com/target-long-url" required>
+                    </div>
+                </div>
+
+                <!-- 自訂別名 -->
+                <div class="form-group">
+                    <label for="customSlug"><i class="fas fa-at"></i> 自訂連結別名 (選填)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-signature prefix-icon"></i>
+                        <input type="text" id="customSlug" placeholder="custom-alias (省略則由系統自動產生)" pattern="^[a-zA-Z0-9\-_]+$" title="僅限英數字、中劃線或底線">
+                    </div>
+                </div>
+
+                <!-- 內部備註 -->
+                <div class="form-group" style="display:none;" id="commentGroup">
+                    <label for="comment"><i class="far fa-comment"></i> 備註 (選填)</label>
+                    <div class="input-wrapper">
+                        <i class="far fa-sticky-note prefix-icon"></i>
+                        <input type="text" id="comment" placeholder="輸入備註，僅供管理查看" value="內部備註">
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <i class="fas fa-link"></i> 產生短網址
+                </button>
+            </form>
+
+            <!-- 成功結果 -->
+            <div class="result-card" id="resultCard">
+                <div class="result-title">
+                    <i class="fas fa-check-circle"></i> 短網址已成功建立！
+                </div>
+                <div class="result-url-display">
+                    <span class="short-url" id="shortUrlOutput">https://...</span>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-action primary" onclick="visitShortUrl()"><i class="fas fa-external-link-alt"></i> 開啟連結</button>
+                    <button class="btn-action" onclick="copyResultUrl()"><i class="far fa-copy"></i> 複製短網址</button>
+                </div>
+            </div>
+
+            <!-- 歷史紀錄 -->
+            <div class="history-section" id="historySection">
+                <div class="history-header">
+                    <div class="history-title">
+                        <i class="fas fa-history"></i> 您的產生歷史
+                    </div>
+                    <button class="clear-history-btn" onclick="clearHistory()"><i class="far fa-trash-alt"></i> 清空紀錄</button>
+                </div>
+                <div class="history-list" id="historyList">
+                    <!-- 歷史項目 -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <i class="fas fa-info-circle"></i> <span id="toastText">訊息提示</span>
+    </div>
+
+    <script>
+        // 初始化歷史記錄
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHistory();
+        });
+
+        function showToast(message, iconClass = 'fa-info-circle') {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toastText');
+            toastText.textContent = message;
+            
+            // 更換圖示
+            const icon = toast.querySelector('i');
+            icon.className = `fas ${iconClass}`;
+
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        async function handleShorten(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            const resultCard = document.getElementById('resultCard');
+            
+            const longUrl = document.getElementById('longUrl').value;
+            const customSlug = document.getElementById('customSlug').value;
+            const comment = document.getElementById('comment').value;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在縮短...';
+            resultCard.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/link/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: longUrl,
+                        slug: customSlug || undefined,
+                        comment: comment
+                    })
+                });
+
+                const resData = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(resData.message || '建立短連結失敗');
+                }
+
+                // 成功生成
+                const link = resData.link;
+                // 拼接短網址：使用外部短網址服務網域
+                const shortUrl = `https://url.yucl.qzz.io/${link.slug}`;
+                
+                document.getElementById('shortUrlOutput').textContent = shortUrl;
+                
+                resultCard.style.display = 'block';
+                showToast('短網址建立成功！', 'fa-check-circle');
+
+                // 存入 LocalStorage 歷史記錄
+                saveToHistory(link, shortUrl);
+
+            } catch (err) {
+                showToast(err.message, 'fa-exclamation-circle');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-link"></i> 產生短網址';
+            }
+        }
+
+        function copyResultUrl() {
+            const shortUrl = document.getElementById('shortUrlOutput').textContent;
+            navigator.clipboard.writeText(shortUrl).then(() => {
+                showToast('已複製短網址至剪貼簿！', 'fa-copy');
+            }).catch(() => {
+                showToast('複製失敗，請手動複製', 'fa-exclamation-triangle');
+            });
+        }
+
+        function visitShortUrl() {
+            const shortUrl = document.getElementById('shortUrlOutput').textContent;
+            window.open(shortUrl, '_blank');
+        }
+
+        // --- 歷史紀錄機制 ---
+        function getHistory() {
+            return JSON.parse(localStorage.getItem('yucl_shorturl_history') || '[]');
+        }
+
+        function saveToHistory(link, shortUrl) {
+            const history = getHistory();
+            // 避免重複
+            const index = history.findIndex(h => h.id === link.id);
+            if (index !== -1) history.splice(index, 1);
+            
+            history.unshift({
+                id: link.id,
+                slug: link.slug,
+                url: link.url,
+                shortUrl: shortUrl,
+                createdAt: link.createdAt
+            });
+
+            // 限制最多 20 筆
+            if (history.length > 20) history.pop();
+
+            localStorage.setItem('yucl_shorturl_history', JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const history = getHistory();
+            const historySection = document.getElementById('historySection');
+            const historyList = document.getElementById('historyList');
+
+            if (history.length === 0) {
+                historySection.style.display = 'none';
+                return;
+            }
+
+            historySection.style.display = 'block';
+            historyList.innerHTML = '';
+
+            history.forEach(item => {
+                const date = new Date(item.createdAt * 1000).toLocaleString('zh-TW', { hour12: false });
+                
+                const itemEl = document.createElement('div');
+                itemEl.className = 'history-item';
+                itemEl.innerHTML = `
+                    <div class="history-item-header">
+                        <a href="${item.shortUrl}" target="_blank" class="history-short">${item.slug}</a>
+                        <div class="history-item-actions">
+                            <button class="history-btn" onclick="copyHistoryUrl('${item.shortUrl}')" title="複製"><i class="far fa-copy"></i></button>
+                            <button class="history-btn delete-btn" onclick="deleteHistoryItem('${item.id}')" title="刪除"><i class="far fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="history-long" title="${item.url}">${item.url}</div>
+                    <div class="history-meta">
+                        <span><i class="far fa-calendar-alt"></i> ${date}</span>
+                    </div>
+                `;
+                historyList.appendChild(itemEl);
+            });
+        }
+
+        function copyHistoryUrl(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('已複製短網址！', 'fa-copy');
+            });
+        }
+
+        function deleteHistoryItem(id) {
+            let history = getHistory();
+            history = history.filter(h => h.id !== id);
+            localStorage.setItem('yucl_shorturl_history', JSON.stringify(history));
+            loadHistory();
+            showToast('已自瀏覽器記錄中移除');
+        }
+
+        function clearHistory() {
+            if (confirm('確定要清空您在此瀏覽器的短網址歷史記錄嗎？')) {
+                localStorage.removeItem('yucl_shorturl_history');
+                loadHistory();
+                showToast('歷史紀錄已清空');
+            }
+        }
+    </script>
+</body>
+</html>

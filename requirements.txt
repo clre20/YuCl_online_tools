@@ -1,0 +1,16 @@
+flask
+yt-dlp
+ffmpeg
+static-ffmpeg
+qrcode
+Pillow
+PyYAML
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-APScheduler
+email-validator
+psutil
+Flask-Limiter
+
+
+markdown

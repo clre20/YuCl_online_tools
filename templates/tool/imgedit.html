@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YuCl 線上工具 | 圖片編輯器</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='ico/YuCl64.png') }}">
+    <meta name="description" content="YuCl 專業圖片編輯器，提供調整尺寸、套用濾鏡與調校色彩平衡等高級處理服務">
+    
+    <!-- Fonts and Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <script src="{{ url_for('static', filename='js/page_tracker.js') }}"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-glow: rgba(37, 99, 235, 0.4);
+            --accent-cyan: #06b6d4;
+            --bg-dark: #090d16;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+            height: 100vh;
+            height: 100dvh;
+            background: #090a0f;
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .app-layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* --- Header --- */
+        .app-header {
+            height: 64px;
+            background: #11121a;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .back-to-home {
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: var(--transition);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .back-to-home:hover {
+            color: #ffffff;
+        }
+
+        .header-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-title span.accent {
+            background: linear-gradient(135deg, #3b82f6, #06b6d4, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-center {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+        .btn .mobile-text {
+            display: none;
+        }
+        .btn:active {
+            transform: translateY(1px) scale(0.98);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.35);
+            filter: brightness(1.1);
+        }
+        .btn-primary:disabled {
+            background: #232530;
+            color: #555c68;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+        }
+        .btn-success:hover {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+            filter: brightness(1.1);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px) scale(1.02);
+        }
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #compare-btn, #download-btn {
+            animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* --- Workspace Layout --- */
+        .workspace {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            height: calc(100vh - 64px);
+            height: calc(100dvh - 64px);
+            overflow: hidden;
+        }
+
+        /* --- Canvas Area (Left/Center) --- */
+        .canvas-area {
+            flex: 1;
+            height: 100%;
+            background-color: #14151b;
+            background-image: linear-gradient(45deg, #1a1b22 25%, transparent 25%),
+                              linear-gradient(-45deg, #1a1b22 25%, transparent 25%),
+                              linear-gradient(45deg, transparent 75%, #1a1b22 75%),
+                              linear-gradient(-45deg, transparent 75%, #1a1b22 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 30px;
+            overflow: hidden;
+        }
+
+        .canvas-dropzone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 60px 40px;
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            cursor: pointer;
+            transition: var(--transition);
+            background: rgba(17, 18, 26, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            animation: pulseBg 3s infinite alternate;
+        }
+        .canvas-dropzone:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(17, 18, 26, 0.7);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 25px 60px rgba(6,182,212,0.25);
+        }
+        .canvas-dropzone i {
+            font-size: 4.5rem;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 25px rgba(6, 182, 212, 0.35);
+            animation: canvasPulse 3s infinite ease-in-out;
+        }
+        .canvas-dropzone h2 { font-size: 1.4rem; font-weight: 800; }
+        .canvas-dropzone p { color: var(--text-muted); font-size: 0.95rem; }
+
+        .preview-container {
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .preview-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            transition: filter 0.15s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* --- Right Sidebar Panel --- */
+        .sidebar {
+            width: 380px;
+            height: 100%;
+            background: #11121a;
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 24px;
+            gap: 16px;
+            flex-shrink: 0;
+            animation: slideInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: transparent; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+
+        .sidebar-section-title {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+        }
+
+        /* File Info Box */
+        .file-info-block {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: var(--transition);
+        }
+        .file-info-block:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+        .info-row span:first-child { color: var(--text-muted); }
+        .info-row span:last-child { font-weight: 700; color: white; }
+
+        /* Accordion Collapsible Sections */
+        details {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 20px; /* Increased category gap */
+            transition: border-color 0.3s ease, background-color 0.3s ease, transform 0.2s ease;
+        }
+        details:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        details[open] {
+            border-color: rgba(6, 182, 212, 0.35);
+            background: rgba(0, 0, 0, 0.15);
+            transform: scale(1.01);
+        }
+        summary {
+            padding: 14px 18px;
+            font-weight: 700;
+            font-size: 0.98rem;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* Fixed spacing alignment */
+            color: var(--text-main);
+            list-style: none;
+            user-select: none;
+            transition: color 0.2s ease;
+        }
+        summary:hover { color: var(--accent-cyan); }
+        summary::-webkit-details-marker { display: none; }
+        summary i {
+            margin-right: 12px; /* Fixed spacing */
+            width: 18px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        summary::after {
+            content: '\f107';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            margin-left: auto; /* Push only the arrow to the right */
+            transition: transform 0.3s ease;
+            color: var(--text-muted);
+        }
+        details[open] summary::after { transform: rotate(180deg); color: var(--accent-cyan); }
+        
+        .details-content {
+            padding: 16px 18px 20px;
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            background: rgba(0, 0, 0, 0.1);
+            animation: itemSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .form-group { position: relative; }
+        .form-group label {
+            display: block;
+            color: #A0A0A0; /* Muted label color */
+            margin-bottom: 6px;
+            font-size: 13px; /* Smaller font size */
+            font-weight: 600;
+            text-align: left;
+        }
+        
+        /* Center text for numerical number inputs */
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.25);
+            color: white;
+            font-size: 0.9rem;
+            text-align: center;
+            outline: none;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+        .form-group input[type="number"]:focus {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 0, 0, 0.35);
+            transform: translateY(-1px);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+        }
+
+        .form-group input:not([type="checkbox"]):not([type="file"]):not([type="range"]):not([type="number"]), .form-group select {
+            width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 6px; background: rgba(0, 0, 0, 0.25); color: white; font-size: 0.9rem;
+            outline: none; transition: border-color 0.3s ease, background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease; font-family: inherit;
+        }
+        .form-group select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 16px; padding-right: 36px; }
+        .form-group input:not([type="checkbox"]):not([type="file"]):not([type="range"]):not([type="number"]):focus, .form-group select:focus {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 0, 0, 0.35);
+            transform: translateY(-1px);
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
+        }
+        .input-wrapper i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1rem; transition: color 0.2s ease; }
+        .input-wrapper:focus-within i { color: var(--accent-cyan); }
+
+        /* Sliders */
+        .slider-group { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+        .slider-label-row { display: flex; justify-content: space-between; align-items: center; }
+        .slider-label-row label { font-size: 0.88rem !important; }
+        .slider-value {
+            font-family: monospace; font-size: 0.82rem; color: var(--accent-cyan); font-weight: 700;
+            background: rgba(0, 0, 0, 0.35); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--card-border);
+            transition: var(--transition);
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+            cursor: pointer;
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.3);
+            background: #22d3ee;
+        }
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.5);
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+        .checkbox-group { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-main); font-weight: 600; font-size: 0.9rem; transition: color 0.2s ease; }
+        .checkbox-group:hover { color: var(--accent-cyan); }
+        .checkbox-group input { width: 16px; height: 16px; accent-color: var(--accent-cyan); transition: transform 0.2s ease; }
+        .checkbox-group input:active { transform: scale(0.85); }
+
+        /* Status & Alert Box */
+        .status-box {
+            padding: 14px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-align: center;
+            animation: pulseBg 2s infinite alternate, itemSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .spinner {
+            border: 3px solid rgba(6, 182, 212, 0.15);
+            border-top: 3px solid var(--accent-cyan);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spinnerRotate 0.8s linear infinite;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(37, 99, 235, 0.95);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            opacity: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* --- Keyframe Definitions --- */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(40px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes pulseBg {
+            0% { box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 0 rgba(6,182,212,0); }
+            100% { box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 20px rgba(6,182,212,0.2); }
+        }
+        @keyframes canvasPulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.3)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.6)); }
+        }
+        @keyframes popUp {
+            from { transform: translate(-50%, 20px) scale(0.95); opacity: 0; }
+            to { transform: translate(-50%, 0) scale(1); opacity: 1; }
+        }
+        @keyframes popIn {
+            from { transform: scale(0.85); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes spinnerRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes itemSlideUp {
+            from { transform: translateY(12px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* --- Photoshop Style Sliders --- */
+        .photoshop-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            margin-top: 4px;
+        }
+        .photoshop-label-left, .photoshop-label-right {
+            font-size: 0.72rem;
+            font-weight: 700;
+            width: 72px;
+            flex-shrink: 0;
+            user-select: none;
+        }
+        .photoshop-label-left {
+            text-align: right;
+        }
+        .photoshop-label-right {
+            text-align: left;
+        }
+
+        /* --- Checkbox Visual Container Block --- */
+        .checkbox-container-block {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-top: 4px;
+            transition: var(--transition);
+        }
+        .checkbox-container-block:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        /* --- Control Group Card --- */
+        .control-group-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: var(--transition);
+        }
+        .control-group-card:hover {
+            background: rgba(255, 255, 255, 0.035);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        /* --- Color Balance Gradient Sliders --- */
+        .gradient-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin: 10px 0;
+        }
+        .gradient-slider-cyan-red {
+            background: linear-gradient(90deg, #06b6d4 0%, #1e202e 50%, #ef4444 100%) !important;
+        }
+        .gradient-slider-magenta-green {
+            background: linear-gradient(90deg, #d946ef 0%, #1e202e 50%, #10b981 100%) !important;
+        }
+        .gradient-slider-yellow-blue {
+            background: linear-gradient(90deg, #eab308 0%, #1e202e 50%, #3b82f6 100%) !important;
+        }
+        
+        /* Custom white thumb for gradient sliders */
+        .gradient-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ffffff !important;
+            border: 2px solid #11121a !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5) !important;
+            cursor: pointer;
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .gradient-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2) !important;
+        }
+        .gradient-slider::-webkit-slider-thumb:active {
+            transform: scale(1.3) !important;
+        }
+        .gradient-slider::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ffffff !important;
+            border: 2px solid #11121a !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5) !important;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+
+        /* --- Dynamic Status dot indicator --- */
+        #header-status-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4b5563;
+            transition: all 0.3s ease;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .status-dot.active-preview {
+            background: var(--accent-cyan);
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+        .status-dot.active-success {
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulseGreen 2s infinite;
+        }
+        .status-dot.active-processing {
+            background: #fbbf24;
+            box-shadow: 0 0 8px #fbbf24;
+            animation: pulseOrange 1s infinite;
+        }
+        .status-dot.active-error {
+            background: #f87171;
+            box-shadow: 0 0 8px #f87171;
+        }
+
+        @keyframes pulseGreen {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.5; }
+        }
+        @keyframes pulseOrange {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.25); opacity: 0.4; }
+        }
+
+        /* --- Responsive Stacking for Mobile --- */
+        @media (max-width: 768px) {
+            .app-header {
+                padding: 0 12px;
+                height: 56px;
+            }
+            .header-title {
+                font-size: 1rem;
+            }
+            .header-title span.desktop-only {
+                display: none;
+            }
+            .header-center {
+                display: none;
+            }
+            .workspace {
+                flex-direction: column;
+                height: calc(100vh - 56px);
+                height: calc(100dvh - 56px);
+                overflow: hidden;
+            }
+            .canvas-area {
+                height: 38vh;
+                width: 100%;
+                flex-shrink: 0;
+                padding: 12px;
+            }
+            .canvas-dropzone {
+                padding: 24px 16px;
+                gap: 6px;
+                max-width: 90%;
+            }
+            .canvas-dropzone i { font-size: 2.2rem; }
+            .canvas-dropzone h2 { font-size: 1rem; }
+            .canvas-dropzone p { font-size: 0.75rem; }
+
+            .sidebar {
+                flex: 1;
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                overflow-y: auto;
+                padding: 16px 14px;
+                gap: 12px;
+                animation: slideInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+        }
+
+        /* --- Very Narrow Screen Optimizations --- */
+        @media (max-width: 600px) {
+            .btn {
+                flex-direction: column;
+                gap: 2px;
+                padding: 6px 8px;
+                height: 48px;
+                min-width: 56px;
+                border-radius: 10px;
+            }
+            .btn i {
+                font-size: 1.1rem;
+            }
+            .btn .desktop-text {
+                display: none !important;
+            }
+            .btn .mobile-text {
+                display: block !important;
+                font-size: 0.65rem;
+                font-weight: 700;
+            }
+            .header-right {
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+                gap: 0.6rem;
+            }
+        }
+
+        @keyframes slideInUp {
+            from { transform: translateY(40px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-layout">
+        <!-- Top Toolbar Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <a href="/" class="back-to-home" title="返回首頁"><i class="fas fa-arrow-left"></i> 返回首頁</a>
+                <h1 class="header-title">
+                    YuCl<span class="accent">圖片編輯</span>
+                </h1>
+            </div>
+            
+
+            <div class="header-right">
+                <button type="button" id="submit-btn" class="btn btn-primary" disabled>
+                    <i class="fas fa-magic"></i> <span class="desktop-text">開始處理</span><span class="mobile-text">開始轉換</span>
+                </button>
+
+                <a href="" id="download-btn" class="btn btn-success" download style="display: none;">
+                    <i class="fas fa-download"></i> <span class="desktop-text">下載圖片</span><span class="mobile-text">下載結果</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="workspace">
+            <!-- Left Side: Interactive Canvas Area -->
+            <main class="canvas-area">
+                <!-- File Upload Dropzone (Visible when no image) -->
+                <div class="canvas-dropzone" id="upload-area">
+                    <i class="fas fa-images"></i>
+                    <h2>匯入您的圖片</h2>
+                    <p>點擊此處或將圖片檔案拖曳至畫布</p>
+                </div>
+
+                <!-- Main Preview Display Container (Visible when image uploaded) -->
+                <div class="preview-container" id="preview-container">
+                    <img id="image-preview" src="" alt="預覽">
+                </div>
+            </main>
+
+            <!-- Right Side: Control Panels Sidebar -->
+            <aside class="sidebar">
+                <form id="img-form">
+                    <input type="file" id="img-input" name="image" accept="image/*" style="display: none;">
+                    
+                    <!-- File Metadata Block -->
+                    <div class="sidebar-section-title">檔案資訊</div>
+                    <div class="file-info-block">
+                        <div class="info-row">
+                            <span>檔案名稱:</span>
+                            <span id="info-name" class="truncate font-mono" style="max-width: 170px;">未選取</span>
+                        </div>
+                        <div class="info-row">
+                            <span>當前尺寸:</span>
+                            <span id="info-dim" class="font-mono">-</span>
+                        </div>
+                        <div class="info-row" id="info-fmt-row" style="display: none;">
+                            <span>檔案格式:</span>
+                            <span id="info-fmt" class="font-mono">-</span>
+                        </div>
+                        <div class="info-row" id="info-size-row" style="display: none;">
+                            <span>檔案大小:</span>
+                            <span id="info-size" class="font-mono">-</span>
+                        </div>
+                        <div class="file-action-buttons" style="display: flex; gap: 8px; margin-top: 4px;">
+                            <button type="button" class="btn btn-secondary" style="flex: 1; padding: 8px;" onclick="imgInput.click()">
+                                <i class="fas fa-folder-open"></i> 選擇圖片
+                            </button>
+                            <button type="button" id="compare-btn" class="btn btn-secondary" style="display: none; padding: 8px 14px; flex-shrink: 0;" title="按住以對比上傳的原始圖片">
+                                <i class="fas fa-eye"></i> 對比原圖
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 8px;" class="sidebar-section-title">圖像參數調整</div>
+
+                    <!-- Panel 1: Resizing -->
+                    <details open>
+                        <summary><i class="fas fa-compress-arrows-alt" style="color: var(--accent-cyan);"></i> 調整尺寸</summary>
+                        <div class="details-content">
+                            <div class="control-group-card">
+                                <div class="grid-2">
+                                    <div class="form-group">
+                                        <label><i class="fas fa-arrows-alt-h" style="margin-right: 4px;"></i> 寬度 (px)</label>
+                                        <input type="number" name="width" id="width-input" placeholder="原始寬度" min="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label><i class="fas fa-arrows-alt-v" style="margin-right: 4px;"></i> 高度 (px)</label>
+                                        <input type="number" name="height" id="height-input" placeholder="原始高度" min="1">
+                                    </div>
+                                </div>
+                                <div class="checkbox-group-wrapper" style="margin-top: 4px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+                                    <label class="checkbox-group">
+                                        <input type="checkbox" name="keep_aspect" value="true" checked>
+                                        <span>保持寬高比</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Panel 1.5: Format Conversion -->
+                    <details>
+                        <summary><i class="fas fa-file-export" style="color: #10b981;"></i> 格式轉換</summary>
+                        <div class="details-content">
+                            <div class="form-group">
+                                <label>選擇輸出格式</label>
+                                <div class="input-wrapper">
+                                    <select name="output_format" id="output_format">
+                                        <option value="original" selected>保留原始格式</option>
+                                        <option value="png">PNG 格式</option>
+                                        <option value="jpeg">JPEG (JPG) 格式</option>
+                                        <option value="webp">WEBP 格式</option>
+                                        <option value="gif">GIF 格式</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Panel 2: Filters -->
+                    <details>
+                        <summary><i class="fas fa-magic" style="color: #f59e0b;"></i> 濾鏡效果</summary>
+                        <div class="details-content">
+                            <div class="form-group">
+                                <label>選擇藝術濾鏡</label>
+                                <div class="input-wrapper">
+                                    <select name="filter_type" id="filter_type">
+                                        <option value="none" selected>無濾鏡效果</option>
+                                        <option value="grayscale">Grayscale (黑白)</option>
+                                        <option value="sepia">Sepia (懷舊復古)</option>
+                                        <option value="blur">Blur (模糊)</option>
+                                        <option value="sharpen">Sharpen (銳化)</option>
+                                        <option value="edge_enhance">Edge Enhance (邊緣增強)</option>
+                                        <option value="contour">Contour (細節輪廓)</option>
+                                        <option value="invert">Invert (反相負片)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Panel 3: Colors Adjustments -->
+                    <details>
+                        <summary><i class="fas fa-sliders-h" style="color: #8b5cf6;"></i> 色彩微調</summary>
+                        <div class="details-content" style="gap: 1.25rem;">
+                            <div class="slider-group">
+                                <div class="slider-label-row">
+                                    <label><i class="fas fa-sun"></i> 亮度</label>
+                                    <span class="slider-value" id="val-brightness">1.00</span>
+                                </div>
+                                <input type="range" name="brightness" min="0.5" max="1.5" step="0.05" value="1.0" oninput="document.getElementById('val-brightness').innerText = parseFloat(this.value).toFixed(2); updatePreviewFilters();">
+                            </div>
+                            <div class="slider-group">
+                                <div class="slider-label-row">
+                                    <label><i class="fas fa-adjust"></i> 對比度</label>
+                                    <span class="slider-value" id="val-contrast">1.00</span>
+                                </div>
+                                <input type="range" name="contrast" min="0.5" max="1.5" step="0.05" value="1.0" oninput="document.getElementById('val-contrast').innerText = parseFloat(this.value).toFixed(2); updatePreviewFilters();">
+                            </div>
+                            <div class="slider-group">
+                                <div class="slider-label-row">
+                                    <label><i class="fas fa-tint"></i> 飽和度</label>
+                                    <span class="slider-value" id="val-saturation">1.00</span>
+                                </div>
+                                <input type="range" name="saturation" min="0.5" max="1.5" step="0.05" value="1.0" oninput="document.getElementById('val-saturation').innerText = parseFloat(this.value).toFixed(2); updatePreviewFilters();">
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Panel 4: Color Balance -->
+                    <details>
+                        <summary><i class="fas fa-palette" style="color: #ef4444;"></i> 色彩平衡</summary>
+                        <div class="details-content" style="gap: 1.25rem; padding: 22px 18px;">
+                            <div class="slider-group">
+                                <input type="range" class="gradient-slider gradient-slider-cyan-red" name="cyan_red" min="-100" max="100" step="1" value="0">
+                            </div>
+                            <div class="slider-group">
+                                <input type="range" class="gradient-slider gradient-slider-magenta-green" name="magenta_green" min="-100" max="100" step="1" value="0">
+                            </div>
+                            <div class="slider-group">
+                                <input type="range" class="gradient-slider gradient-slider-yellow-blue" name="yellow_blue" min="-100" max="100" step="1" value="0">
+                            </div>
+                        </div>
+                    </details>
+                </form>
+
+                <!-- Sidebar Processing Status Indicator -->
+                <div id="status-box" class="status-box">
+                    <div class="spinner"></div>
+                    <span id="status-text" style="color: #06b6d4;">正在處理解析中...</span>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <i class="fas fa-info-circle"></i> <span id="toastText">訊息提示</span>
+    </div>
+
+    <script>
+        const form = document.getElementById('img-form');
+        const uploadArea = document.getElementById('upload-area');
+        const imgInput = document.getElementById('img-input');
+        const imgPreview = document.getElementById('image-preview');
+        const previewContainer = document.getElementById('preview-container');
+        const headerStatus = document.getElementById('header-status') || { textContent: '' };
+        const statusDot = document.getElementById('status-dot') || { className: '' };
+        const submitBtn = document.getElementById('submit-btn');
+        const compareBtn = document.getElementById('compare-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const statusBox = document.getElementById('status-box');
+        
+        // Metadata text elements
+        const infoName = document.getElementById('info-name');
+        const infoDim = document.getElementById('info-dim');
+        const infoFmt = document.getElementById('info-fmt');
+        const infoSize = document.getElementById('info-size');
+        const infoFmtRow = document.getElementById('info-fmt-row');
+        const infoSizeRow = document.getElementById('info-size-row');
+        const filterSelect = document.getElementById('filter_type');
+        
+        const widthInput = document.getElementById('width-input');
+        const heightInput = document.getElementById('height-input');
+
+        let originalImageSrc = '';
+        let processedImageSrc = '';
+
+        // Toast Trigger
+        function showToast(message, iconClass = 'fa-info-circle') {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toastText');
+            toastText.textContent = message;
+            
+            const icon = toast.querySelector('i');
+            icon.className = `fas ${iconClass}`;
+
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Upload Zone Clicking
+        uploadArea.addEventListener('click', () => imgInput.click());
+        
+        imgInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    // Update preview and toggle dropzone
+                    imgPreview.src = e.target.result;
+                    originalImageSrc = e.target.result;
+                    processedImageSrc = ''; // Reset processed path
+                    
+                    imgPreview.style.display = 'block';
+                    previewContainer.style.display = 'flex';
+                    uploadArea.style.display = 'none';
+                    
+                    // Header state changes
+                    submitBtn.disabled = false;
+                    submitBtn.style.display = 'inline-flex';
+                    downloadBtn.style.display = 'none';
+                    compareBtn.style.display = 'none'; // No compare yet
+                    headerStatus.textContent = '圖片載入成功，可開始調整參數';
+                    statusDot.className = 'status-dot active-preview';
+
+                    // Parse image metadata
+                    const tempImg = new Image();
+                    tempImg.src = e.target.result;
+                    tempImg.onload = function() {
+                        const w = this.width;
+                        const h = this.height;
+                        
+                        // Fill side information block
+                        infoName.textContent = file.name;
+                        infoDim.textContent = `${w} x ${h} px`;
+                        
+                        if (infoFmt) infoFmt.textContent = file.type.split('/')[1].toUpperCase();
+                        if (infoSize) infoSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+                        
+                        if (infoFmtRow) infoFmtRow.style.display = 'flex';
+                        if (infoSizeRow) infoSizeRow.style.display = 'flex';
+
+                        // Fill default placeholders in inputs
+                        widthInput.placeholder = w;
+                        heightInput.placeholder = h;
+                    }
+                    
+                    updatePreviewFilters(); // Apply current slider preview style
+                    showToast('圖片載入成功！', 'fa-check-circle');
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor = 'var(--accent-cyan)'; });
+        uploadArea.addEventListener('dragleave', () => uploadArea.style.borderColor = 'rgba(255, 255, 255, 0.15)');
+        uploadArea.addEventListener('drop', e => {
+            e.preventDefault(); uploadArea.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            if (e.dataTransfer.files[0] && e.dataTransfer.files[0].type.startsWith('image/')) {
+                imgInput.files = e.dataTransfer.files;
+                imgInput.dispatchEvent(new Event('change'));
+            }
+        });
+
+        filterSelect.addEventListener('change', updatePreviewFilters);
+
+        // Client-side instant filter preview
+        function updatePreviewFilters() {
+            if (!imgPreview.src || processedImageSrc) return; // Do not apply preview filters if image is already processed
+            
+            const brightness = document.querySelector('input[name="brightness"]').value;
+            const contrast = document.querySelector('input[name="contrast"]').value;
+            const saturation = document.querySelector('input[name="saturation"]').value;
+            const filterType = filterSelect.value;
+            
+            let filterStr = `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`;
+            
+            if (filterType === 'grayscale') {
+                filterStr += ' grayscale(100%)';
+            } else if (filterType === 'sepia') {
+                filterStr += ' sepia(100%)';
+            } else if (filterType === 'blur') {
+                filterStr += ' blur(2px)';
+            } else if (filterType === 'invert') {
+                filterStr += ' invert(100%)';
+            } else if (filterType === 'edge_enhance' || filterType === 'contour' || filterType === 'sharpen') {
+                filterStr += ' contrast(115%) saturate(105%)';
+            }
+            
+            imgPreview.style.filter = filterStr;
+        }
+
+        // --- Live "Hold to Compare" original image feature ---
+        // Mouse/Touch triggers original source image display
+        const showOriginal = (e) => {
+            if (e) e.preventDefault();
+            imgPreview.src = originalImageSrc;
+            imgPreview.style.filter = 'none';
+            headerStatus.textContent = '正在檢視原始圖片';
+            statusDot.className = 'status-dot active-preview';
+        };
+
+        const showCurrent = () => {
+            imgPreview.src = processedImageSrc || originalImageSrc;
+            if (processedImageSrc) {
+                imgPreview.style.filter = 'none'; // Processed image already has styles burned-in
+                headerStatus.textContent = '正在檢視處理後的圖片';
+                statusDot.className = 'status-dot active-success';
+            } else {
+                updatePreviewFilters();
+                headerStatus.textContent = '圖片載入成功';
+                statusDot.className = 'status-dot active-preview';
+            }
+        };
+
+        compareBtn.addEventListener('mousedown', showOriginal);
+        compareBtn.addEventListener('mouseup', showCurrent);
+        compareBtn.addEventListener('mouseleave', showCurrent);
+        
+        compareBtn.addEventListener('touchstart', showOriginal);
+        compareBtn.addEventListener('touchend', showCurrent);
+
+        // Submit to Backend Process
+        submitBtn.addEventListener('click', () => {
+            // Trigger standard form submit
+            form.dispatchEvent(new Event('submit'));
+        });
+
+        let pollInterval = null;
+
+        function onParameterChange() {
+            if (processedImageSrc) {
+                processedImageSrc = '';
+                imgPreview.src = originalImageSrc;
+                compareBtn.style.display = 'none';
+            }
+            updatePreviewFilters();
+            headerStatus.textContent = '圖片載入成功';
+            statusDot.className = 'status-dot active-preview';
+        }
+
+        imgPreview.addEventListener('load', function() {
+            if (processedImageSrc) {
+                const w = imgPreview.naturalWidth;
+                const h = imgPreview.naturalHeight;
+                if (w && h && infoDim) {
+                    infoDim.textContent = `${w} x ${h} px`;
+                }
+            }
+        });
+
+        form.addEventListener('input', onParameterChange);
+        form.addEventListener('change', onParameterChange);
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Clean up any previous poll interval
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+
+            document.body.classList.add('converting');
+            submitBtn.disabled = true;
+            statusBox.style.display = 'flex';
+            
+            const statusText = document.getElementById('status-text');
+            statusText.style.color = '#fbbf24';
+            statusText.textContent = '正在提交任務，請稍候...';
+            headerStatus.textContent = '正在提交排隊任務...';
+            statusDot.className = 'status-dot active-processing';
+
+            try {
+                const response = await fetch('/api/imgedit/process', { 
+                    method: 'POST', 
+                    body: new FormData(this) 
+                });
+                const data = await response.json();
+                
+                if (data.status === 'accepted') {
+                    const taskId = data.task_id;
+                    
+                    // Start polling
+                    pollInterval = setInterval(async () => {
+                        try {
+                            const res = await fetch(`/api/imgedit/status/${taskId}`);
+                            if (!res.ok) {
+                                throw new Error('無法取得任務狀態');
+                            }
+                            const statusData = await res.json();
+                            
+                            if (statusData.status === 'waiting') {
+                                const waitMsg = `排隊中 (前方還有 ${statusData.queue_position} 個任務)...`;
+                                statusText.textContent = waitMsg;
+                                statusText.style.color = '#fbbf24';
+                                headerStatus.textContent = waitMsg;
+                                statusDot.className = 'status-dot active-processing';
+                            } else if (statusData.status === 'processing') {
+                                const procMsg = '正在處理圖像中，請稍候...';
+                                statusText.textContent = procMsg;
+                                statusText.style.color = '#38bdf8';
+                                headerStatus.textContent = procMsg;
+                                statusDot.className = 'status-dot active-processing';
+                            } else if (statusData.status === 'finished') {
+                                clearInterval(pollInterval);
+                                pollInterval = null;
+                                
+                                processedImageSrc = statusData.download_url;
+                                
+                                // Update preview source with processed image path
+                                imgPreview.src = processedImageSrc;
+                                imgPreview.style.filter = 'none'; // Clear CSS filter
+                                
+                                // Update format and size in the sidebar
+                                const ext = processedImageSrc.split('.').pop().toUpperCase();
+                                if (infoFmt) infoFmt.textContent = ext;
+                                
+                                // Get processed file size via HEAD request
+                                fetch(processedImageSrc, { method: 'HEAD' })
+                                    .then(res => {
+                                        if (res.ok) {
+                                            const bytes = res.headers.get('Content-Length');
+                                            if (bytes && infoSize) {
+                                                infoSize.textContent = `${(bytes / 1024).toFixed(1)} KB`;
+                                            }
+                                        }
+                                    })
+                                    .catch(e => console.error('Failed to get processed file size:', e));
+
+                                // Show download button & compare button, keep submit button visible
+                                submitBtn.disabled = false;
+                                submitBtn.style.display = 'inline-flex';
+                                downloadBtn.href = processedImageSrc;
+                                downloadBtn.style.display = 'inline-flex';
+                                compareBtn.style.display = 'inline-flex';
+                                
+                                headerStatus.textContent = '處理完成!';
+                                statusDot.className = 'status-dot active-success';
+                                showToast('處理完成，已載入最新結果！', 'fa-check-circle');
+                                
+                                statusBox.style.display = 'none';
+                                document.body.classList.remove('converting');
+                            } else if (statusData.status === 'error') {
+                                clearInterval(pollInterval);
+                                pollInterval = null;
+                                throw new Error(statusData.message || '處理失敗');
+                            }
+                        } catch (err) {
+                            clearInterval(pollInterval);
+                            pollInterval = null;
+                            handleError(err.message || '連線中斷');
+                        }
+                    }, 1000);
+                } else {
+                    handleError(data.message || '提交失敗');
+                }
+            } catch (error) {
+                handleError('伺服器連線錯誤，請稍後再試。');
+            }
+        });
+
+        function handleError(message) {
+            showToast('錯誤: ' + message, 'fa-exclamation-circle');
+            headerStatus.textContent = '發生錯誤，處理未完成';
+            statusDot.className = 'status-dot active-error';
+            submitBtn.disabled = false;
+            compareBtn.style.display = 'none';
+            statusBox.style.display = 'none';
+            document.body.classList.remove('converting');
+        }
+
+        // Trigger parameter resets if they want to load a fresh settings block
+        function resetParameters() {
+            form.reset();
+            // Reset numerical text readouts specifically
+            const brightnessVal = document.getElementById('val-brightness');
+            if (brightnessVal) brightnessVal.textContent = '1.00';
+            const contrastVal = document.getElementById('val-contrast');
+            if (contrastVal) contrastVal.textContent = '1.00';
+            const saturationVal = document.getElementById('val-saturation');
+            if (saturationVal) saturationVal.textContent = '1.00';
+
+            if (originalImageSrc) {
+                updatePreviewFilters();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統維護中 | YuCl 線上工具</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #0A0908;
+            --text-color: #F5F5DC;
+            --color-primary: #00d2ff;   /* 亮青色 */
+            --color-secondary: #9d50bb; /* 鮮紫色 */
+            --color-accent: #ff00c8;    /* 桃紅色 */
+            --grid-color: rgba(245, 245, 220, 0.05);
+        }
+
+        /* --- 定製捲軸 (Scrollbar) --- */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+        }
+
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 1;
+        }
+
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(0, 210, 255, 0.05) 0%, transparent 70%);
+            z-index: 2;
+        }
+
+        .main-content {
+            position: relative;
+            z-index: 10;
+            padding-top: 5vh;
+            max-width: 800px;
+            width: 100%;
+            pointer-events: none;
+        }
+        
+        .main-content > * { pointer-events: auto; }
+
+        .illustration {
+            position: relative;
+            height: 180px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .glow {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(157, 80, 187, 0.15) 0%, transparent 70%);
+            filter: blur(40px);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 3;
+            transition: transform 0.1s cubic-bezier(0.1, 0.8, 0.2, 1);
+            transform: translate(-50%, -50%);
+            left: 50%;
+            top: 50%;
+        }
+
+        .gear-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .gear-big { font-size: 120px; color: var(--color-secondary); animation: rotate 12s linear infinite; }
+        .gear-small { 
+            position: absolute; 
+            top: -24px; 
+            right: -28px; 
+            font-size: 60px; 
+            color: var(--color-primary); 
+            animation: rotate-reverse 6s linear infinite; 
+        }
+        .tool-icon { 
+            position: absolute; 
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 30px; 
+            color: #fff; 
+            z-index: 5; 
+            opacity: 0.9; 
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+        }
+
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes rotate-reverse { from { transform: rotate(15deg); } to { transform: rotate(-345deg); } }
+
+        h1 {
+            font-size: 3rem;
+            margin: 0 0 15px 0;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--color-primary), var(--color-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* 終端機 */
+        .terminal {
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(0, 210, 255, 0.2);
+            border-radius: 12px;
+            padding: 0;
+            text-align: left;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), 0 0 20px rgba(157, 80, 187, 0.1);
+            backdrop-filter: blur(25px);
+            width: 600px;
+            max-width: 95%;
+            height: 350px;
+            position: fixed;
+            top: 70%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            z-index: 1000;
+            user-select: none;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            opacity: 0; 
+            transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), width 0.4s ease, height 0.4s ease, filter 0.3s ease;
+        }
+
+        .terminal.entrance {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .terminal.maximized {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) scale(1) !important;
+            border-radius: 0;
+        }
+
+        body.collapse-mode {
+            animation: shake 0.5s infinite;
+        }
+        body.collapse-mode .bg-grid {
+            filter: hue-rotate(90deg) opacity(0.2);
+        }
+        body.collapse-mode .terminal {
+            border-color: #ff5f56;
+            box-shadow: 0 0 30px rgba(255, 95, 86, 0.4);
+            filter: skewX(1deg);
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        .term-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: grab;
+            flex-shrink: 0;
+            touch-action: none;
+        }
+        .term-header:active { cursor: grabbing; }
+
+        .dot-container { display: flex; gap: 8px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; transition: filter 0.2s; }
+        .dot:hover { filter: brightness(1.2); }
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27c93f; }
+
+        .term-body {
+            color: #ccc;
+            padding: 15px;
+            flex-grow: 1;
+            overflow-y: auto; 
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: var(--color-secondary) transparent;
+            word-break: break-all;
+        }
+        .term-body::-webkit-scrollbar { width: 5px; }
+        .term-body::-webkit-scrollbar-thumb { background: var(--color-secondary); border-radius: 10px; }
+
+        .line { margin-bottom: 4px; display: flex; flex-wrap: wrap; }
+        .prompt { color: var(--color-primary); margin-right: 8px; white-space: nowrap; }
+        .command { color: #F5F5DC; word-break: break-all; }
+
+        .footer { 
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            padding: 25px;
+            font-size: 0.75rem; 
+            color: #4A453E; 
+            letter-spacing: 1px; 
+            text-transform: uppercase; 
+            z-index: 10;
+        }
+
+        #minimized-icon {
+            position: fixed;
+            bottom: 15px;
+            left: 15px;
+            background: var(--color-primary);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 2000;
+            box-shadow: 0 10px 20px rgba(0, 210, 255, 0.4);
+            font-size: 1.5rem;
+            transition: transform 0.2s, opacity 0.3s;
+            border: none;
+        }
+        #minimized-icon:hover { transform: scale(1.1); }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 1.8rem; }
+            p { font-size: 0.85rem; padding: 0 20px; }
+            .main-content { padding-top: 3vh; }
+            .illustration { height: 140px; margin-bottom: 20px; }
+            .gear-container { width: 90px; height: 90px; }
+            .gear-big { font-size: 90px; }
+            .gear-small { font-size: 45px; top: -18px; right: -20px; }
+            .tool-icon { font-size: 22px; }
+            
+            .terminal { 
+                width: 95%; 
+                height: 300px; 
+                top: 72%;
+                font-size: 0.75rem; 
+            }
+            .term-header { padding: 8px 12px; }
+            .footer { font-size: 0.65rem; padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-gradient"></div>
+
+    <div class="main-content">
+        <div class="illustration">
+            <div class="glow"></div>
+            <div class="gear-container">
+                <i class="fas fa-cog gear-big"></i>
+                <i class="fas fa-cog gear-small"></i>
+                <i class="fas fa-wrench tool-icon"></i>
+            </div>
+        </div>
+        <h1>系統維護中</h1>
+        <p>我們正在優化 YuCl 線上工具的每一行程式碼。<br>為了提供更卓越的服務，請稍候片刻。</p>
+    </div>
+
+    <div class="terminal entrance" id="term-win">
+        <div class="term-header" id="term-head">
+            <div class="dot-container">
+                <div class="dot dot-red" title="關閉" onclick="closeTerm()"></div>
+                <div class="dot dot-yellow" title="最小化" onclick="minimizeTerm()"></div>
+                <div class="dot dot-green" title="最大化" onclick="maximizeTerm()"></div>
+            </div>
+            <div style="margin-left: auto; color: #666; font-size: 0.65rem; pointer-events: none;">yucl@admin: ~ (zsh)</div>
+        </div>
+        <div class="term-body" id="term-body"></div>
+    </div>
+
+    <div class="footer">© 2024-2026 YuCl 線上工具 · 讓您的工作更高效</div>
+
+    <button id="minimized-icon" onclick="restoreTerm()" title="還原終端機">
+        <i class="fas fa-terminal"></i>
+    </button>
+
+    <script>
+        const win = document.getElementById('term-win');
+        const head = document.getElementById('term-head');
+        const body = document.getElementById('term-body');
+        const miniIcon = document.getElementById('minimized-icon');
+        const glow = document.querySelector('.glow');
+
+        // --- 鼠標/觸摸跟隨光圈 ---
+        const moveGlow = (e) => {
+            const x = e.touches ? e.touches[0].clientX : e.clientX;
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            glow.style.left = x + 'px';
+            glow.style.top = y + 'px';
+        };
+        document.addEventListener('mousemove', moveGlow);
+        document.addEventListener('touchmove', moveGlow, { passive: true });
+
+        // --- 視窗操作 ---
+        function closeTerm() {
+            document.body.classList.remove('collapse-mode');
+            win.style.opacity = '0';
+            win.style.transform = 'translate(-50%, -50%) scale(0.5) rotate(10deg)';
+            setTimeout(() => { win.style.display = 'none'; }, 500);
+        }
+
+        async function minimizeTerm() {
+            const isMax = win.classList.contains('maximized');
+            if (isMax) {
+                win.style.width = '100%';
+                win.style.height = '100%';
+                win.style.top = '50%';
+                win.style.left = '50%';
+                win.style.transform = 'translate(-50%, -50%) scale(1)';
+                win.dataset.wasMaximized = 'true';
+                win.classList.remove('maximized');
+            } else {
+                win.dataset.wasMaximized = 'false';
+            }
+
+            miniIcon.style.display = 'flex';
+            win.offsetHeight;
+            win.style.transition = 'all 0.6s cubic-bezier(0.6, -0.28, 0.735, 0.045)';
+            win.style.transform = 'translate(-100vw, 100vh) scale(0) rotate(-45deg)';
+            win.style.opacity = '0';
+
+            setTimeout(() => {
+                win.style.display = 'none';
+                miniIcon.style.opacity = '1';
+                miniIcon.style.transform = 'scale(1)';
+            }, 600);
+        }
+
+        function restoreTerm() {
+            win.style.display = 'flex';
+            setTimeout(() => {
+                win.style.opacity = '1';
+                win.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                win.style.transform = 'translate(-50%, -50%) scale(1)';
+                
+                if (win.dataset.wasMaximized === 'true') {
+                    win.classList.add('maximized');
+                } else {
+                    win.style.width = '';
+                    win.style.height = '';
+                    win.style.top = window.innerWidth <= 600 ? '72%' : '70%';
+                    win.style.left = '50%';
+                }
+                
+                miniIcon.style.opacity = '0';
+                miniIcon.style.transform = 'scale(0)';
+                setTimeout(() => { miniIcon.style.display = 'none'; }, 300);
+            }, 10);
+        }
+
+        function maximizeTerm() {
+            const isNowMaximized = win.classList.toggle('maximized');
+            if (isNowMaximized) {
+                win.style.top = '50%';
+                win.style.left = '50%';
+            } else {
+                win.style.width = '';
+                win.style.height = '';
+                win.style.top = window.innerWidth <= 600 ? '72%' : '70%';
+                win.style.left = '50%';
+            }
+        }
+
+        // --- 拖曳邏輯 ---
+        let dragging = false;
+        let startX, startY, winStartX, winStartY;
+
+        const startDrag = (e) => {
+            if (win.classList.contains('maximized')) return;
+            dragging = true;
+            win.style.transition = 'none';
+            const rect = win.getBoundingClientRect();
+            winStartX = rect.left + rect.width / 2;
+            winStartY = rect.top + rect.height / 2;
+            startX = e.touches ? e.touches[0].clientX : e.clientX;
+            startY = e.touches ? e.touches[0].clientY : e.clientY;
+            if (!e.touches) e.preventDefault();
+        };
+
+        const doDrag = (e) => {
+            if (!dragging) return;
+            if (e.cancelable) e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+            win.style.left = (winStartX + dx) + 'px';
+            win.style.top = (winStartY + dy) + 'px';
+        };
+
+        const endDrag = () => {
+            if (!dragging) return;
+            dragging = false;
+            win.style.transition = 'opacity 0.5s ease, transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), width 0.4s ease, height 0.4s ease';
+        };
+
+        head.onmousedown = startDrag;
+        head.addEventListener('touchstart', startDrag, { passive: false });
+
+        document.onmousemove = doDrag;
+        document.addEventListener('touchmove', doDrag, { passive: false });
+
+        document.onmouseup = endDrag;
+        document.addEventListener('touchend', endDrag);
+
+        // --- 指令模擬 ---
+        const configCmds = [
+            { cmd: "source ~/.bash_profile", output: ["Environment variables loaded."], delay: 400 },
+            { cmd: "git pull origin main", output: ["remote: Counting objects: 100% (15/15), done.", "Updating a4f2c91..b9e3d04", "Fast-forward", " src/api/main.py | 2 +-", " 1 file changed, 1 insertion(+), 1 deletion(-)\n"], delay: 1200 },
+            { cmd: "npm install", hasProgress: true, progressLabel: "Installing dependencies", delay: 3000 },
+            { cmd: "npm audit fix", output: ["found 0 vulnerabilities", "fixed 0 of 0 vulnerabilities"], delay: 800 },
+            { cmd: "npm run build", hasProgress: true, progressLabel: "Building production bundle", delay: 4500 },
+            { cmd: "rsync -avzP -e 'ssh -p 2222' ./build/ deploy@yucl-prod:/var/www/html/dist", hasProgress: true, progressLabel: "Synchronizing assets to production", delay: 2500 },
+            { cmd: "ssh yucl-prod 'sudo chown -R www-data:www-data /var/www/html/dist'", output: ["Permission updated for www-data user."], delay: 600 },
+            { cmd: "ssh yucl-prod 'rm -rf ./cache/*'", output: ["Remote cache cleared successfully."], delay: 500 },
+            { cmd: "ssh yucl-prod 'ls -lh /var/www/html/dist/'", output: ["total 24K", "-rw-r--r-- 1 www-data www-data 142K May 15 10:30 main.js", "-rw-r--r-- 1 www-data www-data 42K May 15 10:30 index.html"], delay: 1200 },
+            { cmd: "redis-cli -h yucl-prod flushall", output: ["OK"], delay: 400 }
+        ];
+
+        async function type(el, text) {
+            for (let char of text) {
+                el.textContent += char;
+                let delay = Math.random() * 80 + 40;
+                if (char === ' ' || char === '-' || char === '.') delay += 150;
+                await new Promise(r => setTimeout(r, delay));
+            }
+        }
+
+        async function drawProgressBar(label, duration) {
+            const container = document.createElement('div');
+            container.style.color = '#888';
+            container.style.marginBottom = '8px';
+            container.style.wordBreak = 'break-all';
+            body.appendChild(container);
+
+            const steps = window.innerWidth <= 600 ? 12 : 20;
+            for (let i = 0; i <= steps; i++) {
+                const percent = Math.round((i / steps) * 100);
+                const filled = "█".repeat(i);
+                const empty = "░".repeat(steps - i);
+                container.textContent = `${label}: [${filled}${empty}] ${percent}%`;
+                body.scrollTop = body.scrollHeight;
+                await new Promise(r => setTimeout(r, duration / steps));
+            }
+            container.style.color = '#27c93f';
+            container.textContent += " [DONE]";
+        }
+
+        function createLine() {
+            const line = document.createElement('div');
+            line.className = 'line';
+            const prompt = document.createElement('span');
+            prompt.className = 'prompt';
+            prompt.textContent = 'yucl@admin:~$ ';
+            const cmdEl = document.createElement('span');
+            cmdEl.className = 'command';
+            line.appendChild(prompt);
+            line.appendChild(cmdEl);
+            body.appendChild(line);
+            return cmdEl;
+        }
+
+        async function runCollapse() {
+            document.body.classList.add('collapse-mode');
+            const crashMsgs = [
+                "CRITICAL: Memory corruption detected at 0x7FFF0042",
+                "ERROR: Failed to initialize database connection pool",
+                "FATAL: Segment fault (core dumped)",
+                "System.ExecutionEngineException: Internal error in the runtime.",
+                "Kernel Panic - not syncing: Attempted to kill init!",
+                "Error: No space left on device (0% remaining)",
+                "Timeout: Server yucl-prod stopped responding.",
+                "RETRYING... [Attempt 442/999]",
+                "ALERT: Overheating detected. Cooling system failure.",
+                "01000101 01010010 01010010 01001111 01010010",
+                "SECURITY ALERT: Unauthorized access attempt detected.",
+                "SIGNAL 11: SIGSEGV",
+                "STACK OVERFLOW AT 0x0000FF",
+                "BUFFER OVERRUN IN MODULE 'KERNEL.DLL'",
+                "PANIC: UNRECOVERABLE HARDWARE ERROR",
+                "0x0000007B: INACCESSIBLE_BOOT_DEVICE",
+                "CPU 0: Machine Check Exception: 0000000000000004",
+                "BUS ERROR: DMA transfer failed",
+                "0x00000050:PAGE_FAULT_IN_NONPAGED_AREA",
+                "HEX DUMP: 48 65 6c 6c 6f 20 57 6f 72 6c 64 21 0a ...",
+                "EIP: 00:0011FFEE EBX: 00000001 ECX: 00000000",
+                "CPU STACK TRACE: [ffffffff81001234] dump_stack+0x12/0x34"
+            ];
+
+            let totalLines = 0;
+            while (true) {
+                const batchSize = Math.floor(Math.random() * 3) + 3;
+                for(let i=0; i<batchSize; i++) {
+                    const err = document.createElement('div');
+                    err.style.color = '#ff5f56';
+                    err.style.fontSize = (Math.random() * 0.3 + 0.8) + 'rem';
+                    err.style.fontWeight = 'bold';
+                    err.style.paddingLeft = (Math.random() * 40) + 'px';
+                    err.textContent = crashMsgs[Math.floor(Math.random() * crashMsgs.length)];
+                    body.appendChild(err);
+                    totalLines++;
+                }
+                
+                body.scrollTop = body.scrollHeight;
+
+                if (body.children.length > 700) {
+                    for(let j=0; j<10; j++) {
+                        if (body.firstChild) body.removeChild(body.firstChild);
+                    }
+                }
+                
+                await new Promise(r => setTimeout(r, 5 + Math.random() * 10));
+
+                if (totalLines > 2000) {
+                    totalLines = 0;
+                    const restart = document.createElement('div');
+                    restart.style.color = '#27c93f';
+                    restart.style.textAlign = 'center';
+                    restart.style.padding = '20px';
+                    restart.style.border = '1px dashed #27c93f';
+                    restart.style.margin = '10px 0';
+                    restart.textContent = ">>> EMERGENCY RECOVERY SIGNAL DETECTED <<<";
+                    body.appendChild(restart);
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
+        }
+
+        async function loop() {
+            await new Promise(r => setTimeout(r, 800));
+            win.classList.add('entrance');
+
+            while (true) {
+                for (let s of configCmds) {
+                    const cmdEl = createLine();
+                    body.scrollTop = body.scrollHeight;
+                    await new Promise(r => setTimeout(r, 600)); 
+
+                    if (Math.random() > 0.8) {
+                        const parts = s.cmd.split(' ');
+                        const wrongCmd = parts[0].substring(0, Math.max(1, Math.floor(parts[0].length / 2))) + "x";
+                        await type(cmdEl, wrongCmd);
+                        await new Promise(r => setTimeout(r, 500));
+                        const err = document.createElement('div');
+                        err.style.color = '#ff5f56';
+                        err.textContent = `sh: ${wrongCmd}: command not found`;
+                        body.appendChild(err);
+                        body.scrollTop = body.scrollHeight;
+                        await new Promise(r => setTimeout(r, 1000));
+                        cmdEl.parentElement.remove();
+                        const retryCmdEl = createLine();
+                        await type(retryCmdEl, s.cmd);
+                    } else {
+                        await type(cmdEl, s.cmd);
+                    }
+
+                    await new Promise(r => setTimeout(r, 500));
+                    
+                    if (s.hasProgress) {
+                        await drawProgressBar(s.progressLabel, s.delay);
+                    } else {
+                        for (let o of s.output) {
+                            const od = document.createElement('div');
+                            od.style.color = '#888';
+                            od.textContent = o;
+                            body.appendChild(od);
+                            body.scrollTop = body.scrollHeight;
+                            await new Promise(r => setTimeout(r, 100));
+                        }
+                    }
+                    await new Promise(r => setTimeout(r, 800 + Math.random() * 1000));
+                }
+
+                const finalCmd = createLine();
+                await type(finalCmd, "ssh yucl-prod 'pm2 reload all --update-env'");
+                await new Promise(r => setTimeout(r, 1000));
+                
+                const services = ["API Gateway", "Auth Service", "Worker Cluster", "Web Server"];
+                for (let service of services) {
+                    const sd = document.createElement('div');
+                    sd.style.color = '#ffbd2e';
+                    sd.textContent = `Restarting ${service}...`;
+                    body.appendChild(sd);
+                    body.scrollTop = body.scrollHeight;
+                    
+                    await new Promise(r => setTimeout(r, 800 + Math.random() * 500));
+                    sd.style.color = '#27c93f';
+                    sd.textContent += " [ONLINE]";
+                }
+                
+                await new Promise(r => setTimeout(r, 1500));
+                const finalCheck = document.createElement('div');
+                finalCheck.style.color = '#F5F5DC';
+                finalCheck.textContent = "Checking system health...";
+                body.appendChild(finalCheck);
+                body.scrollTop = body.scrollHeight;
+                
+                await new Promise(r => setTimeout(r, 2000));
+                finalCheck.style.color = '#ff5f56';
+                finalCheck.textContent += " [503 Service Unavailable]";
+                
+                const warning = document.createElement('div');
+                warning.style.color = '#ff5f56';
+                warning.style.background = 'rgba(255, 95, 86, 0.1)';
+                warning.style.padding = '5px';
+                warning.style.marginTop = '5px';
+                warning.textContent = "WARNING: Unstable upstream detected. Attempting emergency fallback...";
+                body.appendChild(warning);
+                body.scrollTop = body.scrollHeight;
+                
+                await new Promise(r => setTimeout(r, 2000));
+                await runCollapse(); 
+            }
+        }
+        loop();
+    </script>
+</body>
+</html>

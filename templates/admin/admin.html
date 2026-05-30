@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YuCl 管理系統 | 數據總覽</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet.js 地圖庫 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --sidebar-bg: #ffffff;
+            --accent: #0d6efd;
+            --card-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        body {
+            background-color: var(--bg-color);
+            color: #333;
+            font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+            font-size: 14px;
+        }
+        .navbar {
+            background-color: #fff;
+            box-shadow: var(--card-shadow);
+            border-bottom: 1px solid #dee2e6;
+        }
+        .stat-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            background: #fff;
+            padding: 1rem !important;
+            height: 100%;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .tool-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            background: #fff;
+            margin-bottom: 20px;
+        }
+        
+        /* 行動裝置優化 */
+        @media (max-width: 768px) {
+            .container { padding-left: 10px; padding-right: 10px; }
+            .h3 { font-size: 1.3rem !important; }
+            .h2 { font-size: 1.6rem !important; }
+            .navbar-brand { font-size: 1rem; }
+            .stat-card { padding: 0.8rem !important; }
+            #world_map { height: 350px !important; }
+            .rank-item { padding: 8px 10px; font-size: 0.8rem; }
+            .btn-detail { width: 100%; }
+        }
+
+        .btn-detail { border-radius: 20px; padding: 5px 20px; }
+        .icon-box {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 10px;
+        }
+        .bg-light-blue { background-color: #e7f1ff; color: #0d6efd; }
+        .bg-light-green { background-color: #e6ffed; color: #1a7f37; }
+        .bg-light-purple { background-color: #f5f0ff; color: #8250df; }
+        .bg-light-orange { background-color: #fff8eb; color: #9a6700; }
+        
+        #world_map { 
+            width: 100%; height: 500px; 
+            border-radius: 12px; background: #fff;
+            cursor: grab;
+        }
+        #world_map:active { cursor: grabbing; }
+        .country-rank-list { max-height: 440px; overflow-y: auto; }
+        .rank-item {
+            padding: 10px 15px; border-bottom: 1px solid #f1f5f9;
+            display: flex; justify-content: space-between; align-items: center;
+            transition: 0.2s;
+        }
+        .rank-item:hover { background-color: #f8f9fa; }
+        .rank-code { font-weight: 800; color: #4a5568; }
+        .rank-count { font-weight: bold; color: #0d6efd; }
+        .leaflet-control-attribution { display: none; }
+
+        /* [新增] 載入動畫相關 CSS */
+        .loading-shimmer {
+            background: #f6f7f8;
+            background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
+            background-repeat: no-repeat;
+            background-size: 800px 100%;
+            display: inline-block;
+            position: relative;
+            animation: shimmer 1.5s infinite linear forwards;
+        }
+        @keyframes shimmer {
+            0% { background-position: -468px 0; }
+            100% { background-position: 468px 0; }
+        }
+        .fade-in {
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .chart-container { position: relative; }
+        .chart-loader {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.8);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 10; border-radius: 12px;
+            transition: opacity 0.5s;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-light px-4 sticky-top">
+    <a class="navbar-brand fw-bold text-primary" href="/admin">
+        <i class="fa-solid fa-gauge-high me-2"></i> YuCl 管理總覽
+    </a>
+    <div class="d-flex align-items-center">
+        <a href="/admin/logs" class="btn btn-outline-primary btn-sm me-3">
+            <i class="fa-solid fa-book me-1"></i> 查看日誌
+        </a>
+        <span class="me-3 text-muted d-none d-md-inline">管理員模式</span>
+        <button onclick="confirmLogout()" class="btn btn-outline-danger btn-sm">安全登出</button>
+    </div>
+</nav>
+
+<div class="container py-3 py-md-4 fade-in">
+    <!-- 頂部總統計 (手機改為 2x2 並加入間距) -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card stat-card shadow-sm">
+                <div class="icon-box bg-light-blue"><i class="fa-solid fa-users fa-lg"></i></div>
+                <div class="text-muted small">總訪問次數</div>
+                <div class="h3 fw-bold mb-0 count-up" data-value="{{ total_stats.visits }}">0</div>
+                <div class="small text-primary mt-1">今日: +{{ total_stats.daily_visits }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card stat-card shadow-sm">
+                <div class="icon-box bg-light-green"><i class="fa-solid fa-bolt fa-lg"></i></div>
+                <div class="text-muted small">總工具使用</div>
+                <div class="h3 fw-bold mb-0 count-up" data-value="{{ total_stats.usage }}">0</div>
+                <div class="small text-success mt-1">今日: +{{ total_stats.daily_usage }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card stat-card shadow-sm">
+                <div class="icon-box bg-light-orange"><i class="fa-solid fa-address-card fa-lg"></i></div>
+                <div class="text-muted small">總不重複訪客</div>
+                <div class="h3 fw-bold mb-0 count-up" data-value="{{ total_stats.total_unique_ips }}">0</div>
+                <div class="small text-warning mt-1">本週: +{{ total_stats.weekly_unique_ips }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card stat-card shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div class="text-muted small">系統狀態</div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="maintenanceToggle" {% if is_maintenance %}checked{% endif %}>
+                    </div>
+                </div>
+                <div id="maintenanceStatus" class="mb-2">
+                    {% if is_maintenance %}
+                    <span class="badge bg-danger">維護模式中</span>
+                    {% else %}
+                    <span class="badge bg-success">正常運行中</span>
+                    {% endif %}
+                </div>
+                <div class="server-metrics small text-muted" style="font-size: 0.75rem;">
+                    {% if latest_metric %}
+                    CPU: {{ latest_metric.cpu_usage }}% | RAM: {{ latest_metric.ram_usage }}%<br>Disk: {{ latest_metric.disk_usage }}%
+                    {% else %}
+                    收集數據中...
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.getElementById('maintenanceToggle').addEventListener('change', function() {
+        fetch('/api/sys/maintenance/toggle', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                const statusDiv = document.getElementById('maintenanceStatus');
+                if(data.new_status === 'true') {
+                    statusDiv.innerHTML = '<span class="badge bg-danger">維護模式中</span>';
+                    Swal.fire('已開啟維護模式', '前台頁面現已導向維護中畫面', 'warning');
+                } else {
+                    statusDiv.innerHTML = '<span class="badge bg-success">正常運行中</span>';
+                    Swal.fire('已關閉維護模式', '前台頁面已恢復正常訪問', 'success');
+                }
+            }
+        });
+    });
+    </script>
+
+    <!-- 數據分析圖表 -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-lg-8">
+            <div class="card tool-card p-3 p-md-4 shadow-sm mb-0 chart-container">
+                <div id="trendLoader" class="chart-loader">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+                <h6 class="fw-bold mb-3 text-secondary small"><i class="fa-solid fa-chart-line me-2"></i>過去 7 天全站訪問趨勢</h6>
+                <div style="height: 250px;"><canvas id="trendChart"></canvas></div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card tool-card p-3 p-md-4 shadow-sm mb-0 chart-container">
+                <div id="shareLoader" class="chart-loader">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+                <h6 class="fw-bold mb-3 text-secondary small"><i class="fa-solid fa-pie-chart me-2"></i>工具使用量佔比</h6>
+                <div style="height: 250px;"><canvas id="shareChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全球熱力圖 -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card tool-card p-3 p-md-4 shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-secondary small"><i class="fa-solid fa-earth-americas me-2"></i>全球訪客熱力圖 (支援縮放)</h6>
+                    <span class="badge bg-light text-muted border small d-none d-md-inline">按住 Ctrl 並捲動縮放</span>
+                </div>
+                <div class="row chart-container">
+                    <div id="mapLoader" class="chart-loader">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary mb-2" role="status"></div>
+                            <div class="small text-muted">地圖資料載入中...</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-9 mb-3 mb-lg-0"><div id="world_map"></div></div>
+                    <div class="col-12 col-lg-3">
+                        <div class="border rounded p-2 bg-light">
+                            <div class="fw-bold small text-center py-2 border-bottom mb-2 bg-white rounded">
+                                <i class="fa-solid fa-trophy me-1 text-warning"></i> 地區排行榜
+                            </div>
+                            <div class="country-rank-list">
+                                {% for item in chart_data.full_country_list %}
+                                <div class="rank-item bg-white mb-1 rounded shadow-sm">
+                                    <span class="rank-code">{{ item.code }}</span>
+                                    <span class="rank-count">{{ item.count }} 次</span>
+                                </div>
+                                {% endfor %}
+                                <div class="rank-item bg-white mt-3 rounded border border-warning">
+                                    <span class="rank-code text-warning">未知/其它</span>
+                                    <span class="rank-count">{{ chart_data.unknown_count }} 次</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- [新增] 熱門頁面排行榜 -->
+                        <div class="border rounded p-2 bg-light mt-3">
+                            <div class="d-flex justify-content-between align-items-center border-bottom mb-2 bg-white rounded px-2">
+                                <div class="fw-bold small py-2">
+                                    <i class="fa-solid fa-fire me-1 text-danger"></i> 熱門頁面排行
+                                </div>
+                                <div class="form-check form-switch mb-0" style="min-height: auto;">
+                                    <input class="form-check-input" type="checkbox" id="hideApiToggle" style="width: 1.8em; height: 0.9em; margin-top: 0.25em;" {% if hide_api %}checked{% endif %}>
+                                    <label class="form-check-label small text-muted" for="hideApiToggle" style="font-size: 0.7rem;">隱藏 API</label>
+                                </div>
+                            </div>
+                            <div class="country-rank-list" style="max-height: 300px;">
+                                {% for path, count in top_pages %}
+                                <div class="rank-item bg-white mb-1 rounded shadow-sm">
+                                    <span class="rank-code small text-truncate" style="max-width: 150px;" title="{{ path }}">{{ path }}</span>
+                                    <span class="rank-count">{{ count }} 次</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // 監聽 隱藏 API 切換
+    document.getElementById('hideApiToggle').addEventListener('change', function() {
+        const hideApi = this.checked;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('hide_api', hideApi);
+        window.location.href = currentUrl.toString();
+    });
+    </script>
+
+    <!-- 工具列表 -->
+    <h5 class="fw-bold mb-3 mt-5 text-secondary small px-1"><i class="fa-solid fa-wrench me-2"></i>各項工具狀態</h5>
+    <div class="row g-3 px-1 mb-5">
+        {% for tool in tools if tool.name not in ['clre20', 'yueyou_website'] %}
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card tool-card p-3 p-md-4 h-100 mb-0 shadow-sm">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0">{{ tool.name }}</h5>
+                        <div class="mt-1">
+                            {% if tool.is_active %}
+                            <span class="badge bg-success-soft text-success small" id="tool-badge-{{ tool.id }}">運行中</span>
+                            {% else %}
+                            <span class="badge bg-danger-soft text-danger small" id="tool-badge-{{ tool.id }}">維護中</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input tool-status-toggle" type="checkbox" data-id="{{ tool.id }}" {% if tool.is_active %}checked{% endif %}>
+                    </div>
+                </div>
+                <div class="row text-center mb-4">
+                    <div class="col-6 border-end">
+                        <div class="small text-muted">今日訪問</div>
+                        <div class="fw-bold">{{ tool.daily_visit }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">今日使用</div>
+                        <div class="fw-bold">{{ tool.daily_usage }}</div>
+                    </div>
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="/admin/tool/{{ tool.id }}" class="btn btn-primary btn-detail">
+                        進入獨立控制台 <i class="fa-solid fa-arrow-right-long ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 專案網站列表 -->
+    <h5 class="fw-bold mb-3 mt-4 text-secondary small px-1"><i class="fa-solid fa-diagram-project me-2"></i>專案網站狀態</h5>
+    <div class="row g-3 px-1">
+        {% for tool in tools if tool.name in ['clre20', 'yueyou_website'] %}
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card tool-card p-3 p-md-4 h-100 mb-0 shadow-sm" style="border-left: 4px solid var(--accent);">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0">{{ tool.name }}</h5>
+                        <div class="mt-1">
+                            {% if tool.is_active %}
+                            <span class="badge bg-success-soft text-success small" id="tool-badge-{{ tool.id }}">運行中</span>
+                            {% else %}
+                            <span class="badge bg-danger-soft text-danger small" id="tool-badge-{{ tool.id }}">維護中</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input tool-status-toggle" type="checkbox" data-id="{{ tool.id }}" {% if tool.is_active %}checked{% endif %}>
+                    </div>
+                </div>
+                <div class="row text-center mb-4">
+                    <div class="col-6 border-end">
+                        <div class="small text-muted">今日訪問</div>
+                        <div class="fw-bold">{{ tool.daily_visit }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">今日使用</div>
+                        <div class="fw-bold">{{ tool.daily_usage }}</div>
+                    </div>
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="/admin/tool/{{ tool.id }}" class="btn btn-primary btn-detail">
+                        數據分析統計 <i class="fa-solid fa-chart-simple ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    // 工具狀態切換
+    document.querySelectorAll('.tool-status-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const toolId = this.getAttribute('data-id');
+            const isActive = this.checked;
+            const badge = document.getElementById(`tool-badge-${toolId}`);
+
+            fetch(`/api/tool/toggle_status/${toolId}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    if(data.is_active) {
+                        badge.className = 'badge bg-success-soft text-success small';
+                        badge.innerText = '運行中';
+                        Swal.fire({ title: '已啟用工具', icon: 'success', timer: 1000, showConfirmButton: false });
+                    } else {
+                        badge.className = 'badge bg-danger-soft text-danger small';
+                        badge.innerText = '維護中';
+                        Swal.fire({ title: '已關閉工具', text: '該工具目前對外顯示維護中', icon: 'warning', timer: 1500, showConfirmButton: false });
+                    }
+                }
+            });
+        });
+    });
+
+    // --- 數字跑馬燈動畫 ---
+    function initCountUp() {
+        const counters = document.querySelectorAll('.count-up');
+        counters.forEach(counter => {
+            const target = parseInt(counter.getAttribute('data-value'));
+            const duration = 1000; // 1秒
+            const increment = target / (duration / 16);
+            let current = 0;
+
+            const updateCount = () => {
+                if (current < target) {
+                    current += increment;
+                    counter.innerText = Math.floor(current);
+                    requestAnimationFrame(updateCount);
+                } else {
+                    counter.innerText = target;
+                }
+            };
+            updateCount();
+        });
+    }
+
+    // --- 1. Leaflet 全球熱力地圖 ---
+    let map, geojsonLayer;
+    async function initLeafletMap() {
+        const chartData = {{ chart_data | tojson }};
+        const countryData = {};
+        chartData.map_data.forEach(item => { countryData[item[0]] = item[1]; });
+
+        map = L.map('world_map', {
+            center: [20, 0], zoom: 2, minZoom: 2, maxZoom: 10,
+            scrollWheelZoom: false, dragging: true
+        });
+
+        window.addEventListener('keydown', (e) => { if(e.ctrlKey) map.scrollWheelZoom.enable(); });
+        window.addEventListener('keyup', (e) => { map.scrollWheelZoom.disable(); });
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '' }).addTo(map);
+
+        function getColor(d) {
+            return d > 50 ? '#084594' : d > 20 ? '#2171b5' : d > 10 ? '#4292c6' : d > 5 ? '#6baed6' : d > 0 ? '#bdd7e7' : '#f1f3f5';
+        }
+
+        try {
+            const response = await fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson');
+            const data = await response.json();
+            geojsonLayer = L.geoJson(data, {
+                style: function(feature) {
+                    const count = countryData[feature.properties.ISO_A2] || 0;
+                    return { fillColor: getColor(count), weight: 1, opacity: 1, color: 'white', fillOpacity: 0.8 };
+                },
+                onEachFeature: function(feature, layer) {
+                    const code = feature.properties.ISO_A2;
+                    const count = countryData[code] || 0;
+                    layer.bindTooltip(`<b>${feature.properties.ADMIN} (${code})</b><br>訪問次數: ${count}`, { sticky: true });
+                    layer.on('mouseover', function() { this.setStyle({ weight: 2, color: '#666', fillOpacity: 1 }); });
+                    layer.on('mouseout', function() { geojsonLayer.resetStyle(this); });
+                }
+            }).addTo(map);
+            // 隱藏載入動畫
+            document.getElementById('mapLoader').style.opacity = '0';
+            setTimeout(() => document.getElementById('mapLoader').remove(), 500);
+        } catch (e) { 
+            console.error("地圖載入失敗", e);
+            document.getElementById('mapLoader').innerHTML = '<div class="text-danger small">地圖載入失敗</div>';
+        }
+    }
+
+    // --- 2. Chart.js 分析圖表 ---
+    function initCharts() {
+        const chartData = {{ chart_data | tojson }};
+        let delayed;
+
+        // 趨勢圖 (折線圖) - 實現「畫過去」的效果
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.trend.labels,
+                datasets: [{
+                    label: '訪問次數', data: chartData.trend.values,
+                    borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    fill: true, tension: 0.4, borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#fff'
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: false } },
+                animation: {
+                    onComplete: () => { delayed = true; },
+                    delay: (context) => {
+                        let delay = 0;
+                        if (context.type === 'data' && context.mode === 'default' && !delayed) {
+                            // 每個點延遲 150ms 依序出現，造成「畫過去」的視覺感
+                            delay = context.dataIndex * 150 + context.datasetIndex * 100;
+                        }
+                        return delay;
+                    },
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { precision: 0 } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+        document.getElementById('trendLoader').style.opacity = '0';
+        setTimeout(() => document.getElementById('trendLoader').remove(), 500);
+
+        // 佔比圖 (圓餅圖/甜甜圈) - 實現「轉一圈」的效果
+        const shareCtx = document.getElementById('shareChart').getContext('2d');
+        new Chart(shareCtx, {
+            type: 'doughnut',
+            data: {
+                labels: chartData.tool_share.labels,
+                datasets: [{
+                    data: chartData.tool_share.values,
+                    backgroundColor: ['#0d6efd', '#1a7f37', '#8250df', '#9a6700', '#cf222e'],
+                    borderWidth: 0
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { position: 'bottom' } }, 
+                cutout: '70%',
+                animation: {
+                    animateRotate: true,  // 啟動旋轉動畫
+                    animateScale: true,   // 啟動縮放動畫
+                    duration: 2000,       // 延長時間讓「轉一圈」的感覺更明顯
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+        document.getElementById('shareLoader').style.opacity = '0';
+        setTimeout(() => document.getElementById('shareLoader').remove(), 500);
+    }
+
+    // --- 3. 登出確認 ---
+    function confirmLogout() {
+        Swal.fire({
+            title: '確定要登出嗎？', text: "您將結束目前的管理工作階段", icon: 'question',
+            showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6',
+            confirmButtonText: '確定登出', cancelButtonText: '取消'
+        }).then((result) => { if (result.isConfirmed) window.location.href = "{{ url_for('admin_console.logout') }}"; });
+    }
+
+    // 初始化所有內容
+    document.addEventListener('DOMContentLoaded', () => {
+        initCountUp();
+        initLeafletMap();
+        initCharts();
+    });
+</script>
+
+</body>
+</html>
