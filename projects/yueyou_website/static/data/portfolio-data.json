@@ -1,0 +1,58 @@
+[
+    {
+        "id": "project-01",
+        "imageSrc": "/static/yueyou/picture/1.png",
+        "linkUrl": "https://example.com/project1",
+        "menuName": "test2",
+        "metaText": "test3",
+        "titleText": "test1"
+    },
+    {
+        "id": "project-02",
+        "imageSrc": "/static/yueyou/picture/2.png",
+        "linkUrl": "https://example.com/project2",
+        "menuName": "Texture 02",
+        "metaText": "DIGITAL EXPERIENCE — 2026",
+        "titleText": "Nexus Quantum Interface"
+    },
+    {
+        "id": "project-03",
+        "imageSrc": "/static/yueyou/picture/3.png",
+        "linkUrl": "https://example.com/project3",
+        "menuName": "Texture 03",
+        "metaText": "WEB3 LABS — 2026",
+        "titleText": "Solana Decentralized Art"
+    },
+    {
+        "id": "sec-4",
+        "imageSrc": "/static/yueyou/picture/4.png",
+        "linkUrl": "https://yourportfolio.com/project-one",
+        "menuName": "Texture 04",
+        "metaText": "Capturing the delicate balance of light and shadow, where organic forms dissolve into soft grid structures.",
+        "titleText": "N/A4"
+    },
+    {
+        "id": "sec-5",
+        "imageSrc": "/static/yueyou/picture/5.png",
+        "linkUrl": "https://yourportfolio.com/project-one",
+        "menuName": "Texture 05",
+        "metaText": "Capturing the delicate balance of light and shadow, where organic forms dissolve into soft grid structures.",
+        "titleText": "N/A5"
+    },
+    {
+        "id": "project-4e134e",
+        "imageSrc": "/static/yueyou/picture/CoralRose298070.png",
+        "linkUrl": "https://clre20.yucl.qzz.io",
+        "menuName": "測試100",
+        "metaText": "我是來自台灣的大學生，熱愛程式設計，並以軟體開發為興趣和目標。我相信科技的力量能夠改變世界，因此持續學習和提升自己的專業技能，目標將熱忱與專業結合，創造具價值的應用程式與平台，為人們的生活提供便利，實現自己對科技的追求與夢想。",
+        "titleText": "clre20測試"
+    },
+    {
+        "id": "project-26ec11",
+        "imageSrc": "/static/yueyou/picture/YuCl64.png",
+        "metaText": "4",
+        "titleText": "1",
+        "menuName": "2",
+        "linkUrl": "3"
+    }
+]

@@ -1,204 +1,1131 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>建置中...</title>
-  <style>
-    /* 通用重設 */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YUEYOU — Portfolio Dynamic</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght=0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght=300;400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* =================================================================
+           🎨 徹底隱形系統原生捲動軸（解決 Windows 原生軸無法作 transition 的硬傷）
+           ================================================================= */
+        html, body {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+        ::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera 徹底隱藏 */
+        }
 
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      background-color: #222; /* 深色背景 */
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      color: #fff; /* 文字顏色 */
-      text-align: center;
-      overflow: hidden; /* 防止粒子超出畫面產生滾動條 */
-      position: relative; /* 為了絕對定位的元素 */
-    }
+        /* =================================================================
+           🚀 全新打造：完美同步 1.4 秒慢速溶解的「虛擬右側軸」
+           ================================================================= */
+        .custom-scrollbar-track {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 10px;
+            height: 100vh;
+            z-index: 9999;
+            background-color: rgba(255, 255, 255, 0.1); /* 軌道底色微調 */
+            pointer-events: auto;
+            user-select: none;
+        }
 
-    /* 工地警戒線條紋 */
-    body::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: repeating-linear-gradient(
-            45deg,
-            #ffc107, /* 黃色 */
-            #ffc107 20px,
-            #222 20px, /* 深色 */
-            #222 40px
-        );
-        opacity: 0.15; /* 條紋透明度稍微提高 */
-        z-index: -1; /* 讓條紋在內容下方 */
-    }
+        .custom-scrollbar-thumb {
+            position: absolute;
+            top: 0;
+            right: 2px;
+            width: 6px;
+            border-radius: 4px;
+            background-color: #111111; /* 白天模式：黑滑塊 */
+            cursor: pointer;
+            /* 💡 重點：讓右側軸滑塊與主畫面完全同步 1.4 秒慢速溶解 */
+            transition: background-color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
 
+        html {
+            scroll-behavior: auto !important; 
+        }
 
-    .container {
-        text-align: center; /* 文字置中 */
-        padding: 30px;
-        background-color: rgba(0, 0, 0, 0.8); /* 更深的半透明黑色背景 */
-        border-radius: 10px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6); /* 更深的陰影效果 */
-        backdrop-filter: blur(10px); /* 更強的毛玻璃效果 */
-        -webkit-backdrop-filter: blur(10px); /* 針對 Safari */
-        border: 3px dashed #ffc107; /* 黃色虛線邊框，稍微粗一點 */
-        position: relative; /* 為了內容的 z-index */
-        z-index: 1; /* 確保內容在條紋上方 */
-        max-width: 90%; /* 限制最大寬度 */
-        width: 400px; /* 設定固定寬度 */
-    }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
+        body {
+            background-color: #ffffff;
+            font-family: "Plus Jakarta Sans", sans-serif;
+            color: #111;
+            overflow-x: hidden;
+            position: relative;
+            transition: background-color 1.4s cubic-bezier(0.23, 1, 0.32, 1), color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
 
-    h1 {
-      font-size: 3rem;
-      margin-bottom: 20px; /* 調整下方間距 */
-      color: #ffc107; /* 黃色標題 */
-      animation: glow 1.5s ease-in-out infinite alternate; /* 保留發光動畫 */
-    }
+        /* 🌓 黑白切換鈕與 Top 鈕 */
+        .theme-btn, .top-btn {
+            position: fixed;
+            top: 42px;
+            z-index: 100;
+            font-family: "Playfair Display", serif; 
+            font-size: 1.25rem; 
+            font-weight: 600;   
+            color: #000000;
+            text-decoration: none;
+            cursor: pointer;
+            user-select: none;
+            transition: color 1.4s cubic-bezier(0.23, 1, 0.32, 1), transform 0.3s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.5s ease;
+        }
 
-    @keyframes glow {
-      from {
-        text-shadow: 0 0 10px rgba(255, 193, 7, 0.8); /* 黃色發光 */
-      }
-      to {
-        text-shadow: 0 0 20px rgba(255, 193, 7, 1); /* 黃色發光 */
-      }
-    }
+        .theme-btn {
+            left: 50px;
+        }
 
-    p {
-      font-size: 1.2rem;
-      margin-top: 20px; /* 調整上方間距 */
-      margin-bottom: 30px;
-      color: #ccc; /* 淺灰色文字 */
-    }
+        .top-btn {
+            right: 50px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(12px);
+        }
 
-    .spinner {
-      width: 60px; /* 旋轉指示器稍微大一點 */
-      height: 60px;
-      border: 6px solid rgba(255, 255, 255, 0.3);
-      border-top-color: #ffc107; /* 旋轉部分使用黃色 */
-      border-radius: 50%;
-      animation: spin 1s linear infinite; /* 保留旋轉動畫 */
-      margin: 20px auto; /* 上下方間距，並自動置中 */
-      display: block; /* 確保 margin auto 生效 */
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* 墜落粒子樣式 */
-    .particle {
-        position: absolute;
-        width: 5px; /* 粒子大小 */
-        height: 5px;
-        background-color: rgba(255, 193, 7, 0.6); /* 黃色半透明 */
-        border-radius: 50%; /* 圓形粒子 */
-        pointer-events: none; /* 讓粒子不影響滑鼠事件 */
-        animation: fall linear infinite; /* 應用墜落動畫 */
-    }
-
-    /* 墜落動畫 keyframes */
-    @keyframes fall {
-        0% {
-            transform: translateY(0) translateX(0); /* 初始位置 (相對於設定的 top) */
+        .top-btn.show {
             opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
         }
-        100% {
-            transform: translateY(100vh) translateX(var(--random-x)); /* 向下移動 100vh，並有隨機水平偏移 */
-            opacity: 0; /* 墜落到底部時漸隱 */
-        }
-    }
 
+        .theme-btn:hover, .top-btn:hover {
+            transform: scale(1.06); 
+        }
 
-    /* RWD 簡易調整 */
-    @media (max-width: 600px) {
-        h1 {
-            font-size: 2.2rem;
+        /* ⌨️ 幾何「隱形」鍵盤矩陣 */
+        .keyboard-bg-wrapper {
+            position: fixed;
+            width: 200vw;
+            height: 200vh;
+            left: -50vw;
+            top: -50vh;
+            display: flex;
+            flex-direction: column;
+            gap: 6px; 
+            align-items: flex-start;
+            justify-content: center;
+            z-index: 1;
+            transform: skewX(-20deg);
+            pointer-events: none;
+            background-color: #ffffff; 
+            transition: background-color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
         }
-        p {
-            font-size: 1rem;
+
+        .kb-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: nowrap;
+            width: 450vw;
         }
-         .container {
-            padding: 20px;
-            width: 95%; /* 小螢幕下寬度更寬 */
+
+        .key {
+            background-color: #ffffff;
+            border-radius: 8px;
+            height: 90px;
+            flex-shrink: 0;
+            box-shadow: none;
+            transition: box-shadow 0.8s cubic-bezier(0.23, 1, 0.32, 1), background-color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+            will-change: box-shadow, background-color;
         }
-         .spinner {
-            width: 40px;
-            height: 40px;
-            border-width: 4px;
-            margin: 15px auto; /* 小螢幕下調整間距 */
-         }
-    }
-  </style>
+
+        .key.pressed, .key.ripple-active {
+            background-color: #e0e0e0; 
+            box-shadow:
+                inset 15px 15px 35px rgba(0, 0, 0, 0.12),
+                inset -12px -12px 30px rgba(255, 255, 255, 0.8),
+                inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+            transition: box-shadow 0.04s ease-in, background-color 0.04s ease-in;
+        }
+
+        /* 🎱 視覺核心：YUEYOU 八號球 */
+        .hero {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: transparent;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-family: "Playfair Display", serif;
+            font-size: 8rem;
+            font-weight: 400;
+            letter-spacing: 0.4rem;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            line-height: 1;
+            transition: color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .geometric-eye-o {
+            display: inline-block;
+            position: relative;
+            width: 0.72em;
+            height: 0.72em;
+            margin-left: 0.3rem;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+            border-radius: 50%;
+            overflow: hidden;
+            background-color: transparent;
+            transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform;
+            clip-path: circle(50% at 50% 50%);
+        }
+
+        .ball-core {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #111; 
+            border-radius: 50%;
+            transform: translate(0, 0) scale(1);
+            transition: transform 0.18s cubic-bezier(0.25, 1, 0.5, 1), background-color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+            will-change: transform;
+        }
+
+        .geometric-eye-o.look-down .ball-core {
+            transform: translate(0, 68%) scale(0.85);
+        }
+
+        .geometric-eye-o.blink {
+            transform: scaleY(0.04);
+        }
+
+        .geometric-eye-o.blink .ball-core {
+            transform: translate(0, 0) scale(1);
+        }
+
+        #portfolio-container {
+            width: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        .reveal-section {
+            min-height: 130vh;
+            margin-bottom: 50vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10vh 10vw;
+            gap: 8%;
+            perspective: 2000px;
+            transform-style: preserve-3d;
+        }
+
+        .reveal-section:nth-of-type(even) {
+            flex-direction: row-reverse;
+        }
+
+        .reveal-section:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .wave-container {
+            flex: 1;
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 6 / 7;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.1, 0.9, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            will-change: transform;
+            transform: rotateY(0deg);
+        }
+
+        @media (min-width: 769px) {
+            .reveal-section:nth-of-type(odd) .wave-container {
+                transform: rotateY(28deg);
+                transform-origin: center right;
+            }
+
+            .reveal-section:nth-of-type(even) .wave-container {
+                transform: rotateY(-28deg);
+                transform-origin: center left;
+            }
+        }
+
+        .pixel-stage {
+            position: relative;
+            transform-style: preserve-3d;
+            contain: layout paint;
+            background-color: #ffffff;
+            opacity: 0;
+            -webkit-box-reflect: below 4px linear-gradient(transparent 80%, rgba(255, 255, 255, 0.2));
+            cursor: pointer;
+            transition: background-color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .pixel-dot {
+            position: absolute;
+            background-repeat: no-repeat;
+            background-color: #ffffff;
+            width: var(--pw);
+            height: var(--ph);
+            left: 0;
+            top: 0;
+            background-size: var(--bw) var(--bh);
+            background-position: var(--bx) var(--by);
+            opacity: 0 !important;
+            transform: translate3d(var(--x), var(--y), -100px) scale(0.1);
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+            transition: background-color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        @keyframes rippleIn {
+            0% {
+                opacity: 0;
+                transform: translate3d(var(--x), var(--y), -100px) scale(0.1);
+            }
+            30% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 1;
+                transform: translate3d(var(--x), var(--y), 0px) scale(1);
+            }
+        }
+
+        @keyframes pixelShrinkOut {
+            0% {
+                opacity: 1;
+                transform: translate3d(var(--x), var(--y), 0px) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate3d(var(--x), var(--y), 0px) scale(0.1);
+            }
+        }
+
+        .pixel-stage.active .pixel-dot {
+            opacity: 1 !important;
+            animation: rippleIn 1s cubic-bezier(0.15, 0.85, 0.35, 1) forwards;
+        }
+
+        .pixel-stage.unstage .pixel-dot {
+            animation: pixelShrinkOut 0.5s cubic-bezier(0.15, 0.85, 0.35, 1) forwards;
+        }
+
+        .text-container {
+            flex: 1;
+            max-width: 500px;
+        }
+
+        .text-container .sub-meta {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #666;
+            margin-bottom: 1.5rem;
+            padding-left: 15px;
+            border-left: 2px solid #ddd;
+            transition: color 1.4s cubic-bezier(0.23, 1, 0.32, 1), border-color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .text-container h2 {
+            font-family: "Playfair Display", serif;
+            font-size: 2.5rem;
+            font-weight: 400;
+            line-height: 1.3;
+            color: #111;
+            margin-bottom: 1.5rem;
+            transition: color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .project-link {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            color: #111;
+            text-decoration: none;
+            position: relative;
+            padding-bottom: 4px;
+            transition: color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .project-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background-color: #111;
+            transform: scaleX(0.3);
+            transform-origin: left;
+            transition: transform 0.3s ease, background-color 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .project-link:hover::after {
+            transform: scaleX(1);
+        }
+
+        /* =================================================================
+           🌌 🖤 DARK MODE 暗黑主題核心配置樣式（1.4秒虛擬右側軸優化）
+           ================================================================= */
+        body.dark-mode {
+            background-color: #000000;
+            color: #ffffff;
+        }
+
+        /* 💡 【完美修正】新右側軸滑塊在黑夜模式下同步慢速淡化為優雅純白 */
+        body.dark-mode .custom-scrollbar-thumb {
+            background-color: #eeeeee;
+        }
+
+        body.dark-mode .theme-btn, body.dark-mode .top-btn {
+            color: #ffffff;
+        }
+
+        body.dark-mode .keyboard-bg-wrapper {
+            background-color: #0d0d0d; 
+        }
+
+        body.dark-mode .key {
+            background-color: #0d0d0d; 
+        }
+
+        body.dark-mode .key.pressed, body.dark-mode .key.ripple-active {
+            background-color: #1a1a1a;
+            box-shadow:
+                inset 15px 15px 35px rgba(255, 255, 255, 0.03),
+                inset -12px -12px 30px rgba(0, 0, 0, 0.8),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+
+        body.dark-mode .ball-core {
+            background-color: #ffffff;
+        }
+
+        body.dark-mode .pixel-stage, body.dark-mode .pixel-dot {
+            background-color: #000000;
+        }
+
+        body.dark-mode .text-container h2, body.dark-mode .project-link {
+            color: #ffffff;
+        }
+
+        body.dark-mode .text-container .sub-meta {
+            color: #888888;
+            border-left-color: #333333;
+        }
+
+        body.dark-mode .project-link::after {
+            background-color: #ffffff;
+        }
+
+        /* 📱 手機響應式外觀 */
+        @media (max-width: 768px) {
+            .custom-scrollbar-track {
+                display: none; /* 手機端不需要自訂滑塊 */
+            }
+            .theme-btn {
+                top: 25px;
+                left: 25px;
+                font-size: 1rem; 
+            }
+            .top-btn {
+                top: 25px;
+                right: 25px;
+                font-size: 1rem; 
+            }
+            .reveal-section,
+            .reveal-section:nth-of-type(even) {
+                flex-direction: column;
+                padding: 5rem 2rem;
+                text-align: center;
+                min-height: auto;
+                margin-bottom: 25vh;
+            }
+            .wave-container {
+                width: 58vw;
+                max-width: 270px;
+                margin: 0 auto;
+            }
+            .hero h1 {
+                font-size: 4rem;
+            }
+            .text-container h2 {
+                font-size: 1.8rem;
+            }
+            .text-container .sub-meta {
+                border-left: none;
+                padding-left: 0;
+            }
+        }
+    </style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>🚧 建造中 🚧</h1>
-        <div class="spinner"></div> <p>此頁面正在努力施工中！</p>
 
-        </div>
+    <span class="theme-btn" id="theme-toggle">Dark</span>
+    <span class="top-btn" id="back-to-top">Top</span>
 
-  <script>
-    // JavaScript 程式碼開始
+    <div class="custom-scrollbar-track" id="custom-track">
+        <div class="custom-scrollbar-thumb" id="custom-thumb"></div>
+    </div>
 
-    const body = document.body; // 取得 body 元素
+    <div class="keyboard-bg-wrapper" id="keyboard-bg-stage"></div>
 
-    // 函數：創建並添加一個粒子
-    function createParticle() {
-        const particle = document.createElement('div'); // 創建一個新的 div 元素
-        particle.classList.add('particle'); // 添加 particle class
+    <section class="hero">
+        <h1>YUEY<div class="geometric-eye-o" id="geometric-eye">
+                <div class="ball-core"></div>
+            </div>U</h1>
+    </section>
 
-        // 設定粒子初始位置 (X 軸隨機，Y 軸在畫面最上方或稍微上方)
-        const startX = Math.random() * window.innerWidth;
-        particle.style.left = `${startX}px`;
-        particle.style.top = `${-Math.random() * 20}px`; // 設定初始垂直位置在畫面最上方或稍微上方 (-0px 到 -20px 之間)
+    <div id="portfolio-container">
+        {% for project in json_files %}
+        <section class="reveal-section" id="{{ project.id }}">
+            <div class="wave-container">
+                <div class="pixel-stage" id="stage-{{ project.id }}"></div>
+            </div>
+            <div class="text-container">
+                <p class="sub-meta">{{ project.metaText }}</p>
+                <h2>{{ project.titleText }}</h2>
+                <a href="{{ project.linkUrl }}" target="_blank" class="project-link">View Project →</a>
+            </div>
+        </section>
+        {% endfor %}
+    </div>
 
+    <script>
+        const CONFIG_JSON_FILES = JSON.parse('{{ json_files | tojson }}');
+        let portfolioData = [];
+        let effectInstances = []; 
+        let autoScrollTimeoutTimer = null; 
 
-        // 隨機設定粒子大小 (稍微變化)
-        const size = Math.random() * 3 + 3; // 大小在 3px 到 6px 之間
-        particle.style.width = `${size}px`;
-        particle.style.height = `${size}px`;
+        // 物理慣性滾動 LERP 變數
+        let targetScrollY = window.scrollY;
+        let currentScrollY = window.scrollY;
+        let isScrollLoopMoving = false;
+        const SCROLL_EASE = 0.08; 
 
-        // 隨機設定動畫持續時間 (影響墜落速度)
-        const duration = Math.random() * 3 + 2; // 持續時間在 2 秒到 5 秒之間
-        particle.style.animationDuration = `${duration}s`;
+        // =================================================================
+        // 🌊 物理慣性滾動核心演算（加入動態虛擬右側軸連動）
+        // =================================================================
+        const customThumb = document.getElementById('custom-thumb');
+        const customTrack = document.getElementById('custom-track');
 
-        // 隨機設定動畫延遲 (讓粒子不同時開始墜落)
-        const delay = Math.random() * 2; // 延遲在 0 秒到 2 秒之間
-        particle.style.animationDelay = `${delay}s`;
+        function updateCustomScrollbar() {
+            if (!customThumb) return;
+            const totalHeight = document.documentElement.scrollHeight;
+            const windowHeight = window.innerHeight;
+            
+            if (totalHeight <= windowHeight) {
+                customTrack.style.display = 'none';
+                return;
+            } else {
+                if (window.innerWidth > 768) customTrack.style.display = 'block';
+            }
 
-        // 隨機設定水平偏移量 (讓粒子斜向墜落)
-        const randomX = (Math.random() - 0.5) * 100; // 水平偏移量在 -50px 到 50px 之間 (稍微縮小偏移範圍)
-        particle.style.setProperty('--random-x', `${randomX}px`); // 使用 CSS 變數傳遞隨機值
+            // 動態計算滑塊高度比例
+            const thumbHeight = Math.max(40, (windowHeight / totalHeight) * windowHeight);
+            customThumb.style.height = `${thumbHeight}px`;
 
-        // 將粒子添加到 body 中
-        body.appendChild(particle);
+            // 動態計算滑塊目前 Y 軸位移位置
+            const maxScroll = totalHeight - windowHeight;
+            const currentPercent = currentScrollY / maxScroll;
+            const maxThumbTop = windowHeight - thumbHeight;
+            customThumb.style.transform = `translateY(${currentPercent * maxThumbTop}px)`;
+        }
 
-        // 動畫結束後移除粒子，避免累積過多元素
-        particle.addEventListener('animationend', () => {
-            particle.remove();
+        function smoothScrollLoop() {
+            const diff = targetScrollY - currentScrollY;
+            if (Math.abs(diff) > 0.5) {
+                currentScrollY += diff * SCROLL_EASE;
+                window.scrollTo(0, currentScrollY);
+                updateCustomScrollbar(); // 💡 讓虛擬右側軸完美跟隨物理慣性流暢位移
+                requestAnimationFrame(smoothScrollLoop);
+            } else {
+                window.scrollTo(0, targetScrollY);
+                currentScrollY = targetScrollY;
+                updateCustomScrollbar();
+                isScrollLoopMoving = false;
+            }
+        }
+
+        window.addEventListener('wheel', (e) => {
+            e.preventDefault(); 
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            targetScrollY += e.deltaY;
+            targetScrollY = Math.max(0, Math.min(targetScrollY, maxScroll));
+
+            if (!isScrollLoopMoving) {
+                isScrollLoopMoving = true;
+                requestAnimationFrame(smoothScrollLoop);
+            }
+        }, { passive: false });
+
+        window.addEventListener('scroll', () => {
+            if (!isScrollLoopMoving) {
+                targetScrollY = window.scrollY;
+                currentScrollY = window.scrollY;
+                updateCustomScrollbar();
+            }
+
+            const topBtn = document.getElementById('back-to-top');
+            if (topBtn) {
+                if (window.scrollY > 300) {
+                    topBtn.classList.add('show');
+                } else {
+                    topBtn.classList.remove('show');
+                }
+            }
         });
-    }
 
-    // 每隔一段時間創建一個新的粒子
-    setInterval(createParticle, 100); // 每 100 毫秒創建一個粒子 (可以調整頻率)
+        // 💡 點擊並拖曳右側軸滑塊的頂級互動演算法
+        function initCustomScrollbarDrag() {
+            if (!customThumb) return;
+            let isDragging = false;
+            let startMouseY = 0;
+            let startScrollY = 0;
 
-    // JavaScript 程式碼結束
-  </script>
+            customThumb.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startMouseY = e.clientY;
+                startScrollY = targetScrollY;
+                document.body.style.userSelect = 'none';
+                e.stopPropagation();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const totalHeight = document.documentElement.scrollHeight;
+                const windowHeight = window.innerHeight;
+                const thumbHeight = parseFloat(customThumb.style.height);
+                
+                const deltaY = e.clientY - startMouseY;
+                const maxThumbTop = windowHeight - thumbHeight;
+                const maxScroll = totalHeight - windowHeight;
+
+                const scrollDelta = (deltaY / maxThumbTop) * maxScroll;
+                targetScrollY = Math.max(0, Math.min(startScrollY + scrollDelta, maxScroll));
+
+                if (!isScrollLoopMoving) {
+                    isScrollLoopMoving = true;
+                    requestAnimationFrame(smoothScrollLoop);
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    document.body.style.userSelect = 'auto';
+                }
+            });
+        }
+
+        function initTopButton() {
+            const topBtn = document.getElementById('back-to-top');
+            if (!topBtn) return;
+
+            topBtn.addEventListener('click', () => {
+                targetScrollY = 0; 
+                if (!isScrollLoopMoving) {
+                    isScrollLoopMoving = true;
+                    requestAnimationFrame(smoothScrollLoop);
+                }
+            });
+        }
+
+        // =================================================================
+        // 🌓 黑夜/白天模式切換與修復重新算圖機制
+        // =================================================================
+        function initThemeToggle() {
+            const themeBtn = document.getElementById('theme-toggle');
+            if (!themeBtn) return;
+
+            const savedTheme = localStorage.getItem('yueyou-theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                themeBtn.textContent = 'Light';
+            } else {
+                document.body.classList.remove('dark-mode');
+                themeBtn.textContent = 'Dark';
+            }
+
+            themeBtn.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                const isDarkActive = document.body.classList.contains('dark-mode');
+                
+                themeBtn.textContent = isDarkActive ? 'Light' : 'Dark';
+                localStorage.setItem('yueyou-theme', isDarkActive ? 'dark' : 'light');
+                
+                setTimeout(() => {
+                    effectInstances.forEach(eff => {
+                        if (eff.instance && typeof eff.instance.recalculate === 'function') {
+                            eff.instance.recalculate();
+                        }
+                    });
+                }, 50);
+            });
+        }
+
+        // =================================================================
+        // 🎱 八號球動畫
+        // =================================================================
+        function initGeometricEye() {
+            const eyeWrapper = document.getElementById('geometric-eye');
+            if (!eyeWrapper) return;
+
+            function triggerBlink(callback) {
+                eyeWrapper.classList.add('blink');
+                setTimeout(() => {
+                    eyeWrapper.classList.remove('blink');
+                    if (callback) callback();
+                }, 130);
+            }
+
+            function eyeLifeCycle() {
+                eyeWrapper.classList.add('look-down');
+                let lookDownDuration = Math.random() * 800 + 1000;
+
+                setTimeout(() => {
+                    if (Math.random() > 0.1) {
+                        eyeWrapper.classList.remove('look-down');
+                        setTimeout(() => {
+                            triggerBlink(() => {
+                                if (Math.random() > 0.75) {
+                                    setTimeout(() => triggerBlink(), 150);
+                                }
+                            });
+                        }, 150);
+                    } else {
+                        eyeWrapper.classList.remove('look-down');
+                    }
+                }, lookDownDuration);
+
+                const nextInterval = Math.random() * 2500 + 3500;
+                setTimeout(eyeLifeCycle, nextInterval);
+            }
+
+            setTimeout(eyeLifeCycle, 1500);
+        }
+
+        // ⏳ 30 秒自動滾動
+        function resetAutoScrollTimer() {
+            if (autoScrollTimeoutTimer) {
+                clearTimeout(autoScrollTimeoutTimer);
+            }
+
+            if (window.scrollY < 100) {
+                autoScrollTimeoutTimer = setTimeout(() => {
+                    const firstProjectImage = document.querySelector('.reveal-section .wave-container');
+                    if (firstProjectImage) {
+                        const rect = firstProjectImage.getBoundingClientRect();
+                        const absoluteTop = rect.top + window.scrollY;
+                        const target = absoluteTop - (window.innerHeight - rect.height) / 2;
+                        
+                        targetScrollY = Math.max(0, Math.min(target, document.documentElement.scrollHeight - window.innerHeight));
+                        if (!isScrollLoopMoving) {
+                            isScrollLoopMoving = true;
+                            requestAnimationFrame(smoothScrollLoop);
+                        }
+                    }
+                }, 30000); 
+            }
+        }
+
+        window.addEventListener('scroll', () => {
+            resetAutoScrollTimer();
+        });
+
+        // =================================================================
+        // ⌨️ 背景隱形鍵盤矩陣建構
+        // =================================================================
+        const KEY_BASE_SIZE = 90;
+        const GAP = 6;
+
+        const standardLayout = [
+            [
+                { c: 'Backquote', w: 1 }, { c: 'Digit1', w: 1 }, { c: 'Digit2', w: 1 }, { c: 'Digit3', w: 1 }, { c: 'Digit4', w: 1 },
+                { c: 'Digit5', w: 1 }, { c: 'Digit6', w: 1 }, { c: 'Digit7', w: 1 }, { c: 'Digit8', w: 1 }, { c: 'Digit9', w: 1 },
+                { c: 'Digit0', w: 1 }, { c: 'Minus', w: 1 }, { c: 'Equal', w: 1 }, { c: 'Backspace', w: 2 }
+            ],
+            [
+                { c: 'Tab', w: 1.5 }, { c: 'KeyQ', w: 1 }, { c: 'KeyW', w: 1 }, { c: 'KeyE', w: 1 }, { c: 'KeyR', w: 1 },
+                { c: 'KeyT', w: 1 }, { c: 'KeyY', w: 1 }, { c: 'KeyU', w: 1 }, { c: 'KeyI', w: 1 }, { c: 'KeyO', w: 1 },
+                { c: 'KeyP', w: 1 }, { c: 'BracketLeft', w: 1 }, { c: 'BracketRight', w: 1 }, { c: 'Backslash', w: 1.5 }
+            ],
+            [
+                { c: 'CapsLock', w: 1.75 }, { c: 'KeyA', w: 1 }, { c: 'KeyS', w: 1 }, { c: 'KeyD', w: 1 }, { c: 'KeyF', w: 1 },
+                { c: 'KeyG', w: 1 }, { c: 'KeyH', w: 1 }, { c: 'KeyJ', w: 1 }, { c: 'KeyK', w: 1 }, { c: 'KeyL', w: 1 },
+                { c: 'Semicolon', w: 1 }, { c: 'Quote', w: 1 }, { c: 'Enter', w: 2.25 }
+            ],
+            [
+                { c: 'ShiftLeft', w: 2.25 }, { c: 'KeyZ', w: 1 }, { c: 'KeyX', w: 1 }, { c: 'KeyC', w: 1 }, { c: 'KeyV', w: 1 },
+                { c: 'KeyB', w: 1 }, { c: 'KeyN', w: 1 }, { c: 'KeyM', w: 1 }, { c: 'Comma', w: 1 }, { c: 'Period', w: 1 },
+                { c: 'Slash', w: 1 }, { c: 'ShiftRight', w: 2.75 }
+            ],
+            [
+                { c: 'ControlLeft', w: 1.25 }, { c: 'MetaLeft', w: 1.25 }, { c: 'AltLeft', w: 1.25 },
+                { c: 'Space', w: 6.25 },
+                { c: 'AltRight', w: 1.25 }, { c: 'MetaRight', w: 1.25 }, { c: 'ContextMenu', w: 1.25 }, { c: 'ControlRight', w: 1.25 }
+            ]
+        ];
+
+        function buildSeamlessMatrixBg() {
+            const stage = document.getElementById('keyboard-bg-stage');
+            if (!stage) return;
+            stage.innerHTML = '';
+
+            const totalRows = Math.ceil((window.innerHeight * 2) / (KEY_BASE_SIZE + GAP));
+            const screenW = window.innerWidth * 4;
+
+            for (let r = 0; r < totalRows; r++) {
+                const rowEl = document.createElement('div');
+                rowEl.className = 'kb-row';
+
+                const keyboardSetIndex = Math.floor(r / 5);
+                const subRowIndex = r % 5;
+
+                const baseOffset = (keyboardSetIndex * -180) + (subRowIndex * -15);
+                rowEl.style.transform = `translateX(${baseOffset}px)`;
+
+                let currentWidth = 0;
+                const rowTemplate = standardLayout[subRowIndex];
+
+                while (currentWidth < screenW) {
+                    rowTemplate.forEach(keyDef => {
+                        const exactW = keyDef.w * KEY_BASE_SIZE;
+                        const keyEl = document.createElement('div');
+                        keyEl.className = 'key';
+                        keyEl.style.width = `${exactW}px`;
+                        keyEl.setAttribute('data-code', keyDef.c);
+
+                        rowEl.appendChild(keyEl);
+                        currentWidth += exactW + GAP;
+                    });
+                }
+                stage.appendChild(rowEl);
+            }
+        }
+
+        // =================================================================
+        // 🖱️ 滑鼠點擊效果
+        // =================================================================
+        function initMouseRippleEffect() {
+            window.addEventListener('mousedown', (e) => {
+                const mx = e.clientX;
+                const my = e.clientY;
+                const keys = document.querySelectorAll('.key');
+
+                const maxRadius = 700;      
+                const speedFactor = 2.6;   
+
+                keys.forEach(key => {
+                    const rect = key.getBoundingClientRect();
+                    const kx = rect.left + rect.width / 2;
+                    const ky = rect.top + rect.height / 2;
+
+                    const dx = mx - kx;
+                    const dy = my - ky;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < maxRadius) {
+                        const delay = dist * speedFactor;
+                        setTimeout(() => {
+                            key.classList.add('ripple-active');
+                            setTimeout(() => {
+                                key.classList.remove('ripple-active');
+                            }, 280); 
+                        }, delay);
+                    }
+                });
+            });
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') e.preventDefault();
+            if (e.repeat) return;
+            document.querySelectorAll(`.key[data-code="${e.code}"]`).forEach(k => k.classList.add('pressed'));
+        });
+
+        window.addEventListener('keyup', (e) => {
+            document.querySelectorAll(`.key[data-code="${e.code}"]`).forEach(k => k.classList.remove('pressed'));
+        });
+
+        // =================================================================
+        // ⚙️ 作品集核心特效機制
+        // =================================================================
+        class FramerIntegratedWave {
+            constructor(stageElement, imgSrc, pixelSize = 50) {
+                this.stage = stageElement;
+                this.imgSrc = imgSrc;
+                this.pixelSize = pixelSize;
+                this.savedScatters = [];
+                this.init();
+            }
+
+            init() {
+                if (!this.imgSrc) return;
+                const img = new Image();
+                img.src = this.imgSrc;
+
+                img.onload = () => {
+                    this.buildPixels(img);
+                };
+            }
+
+            buildPixels(img) {
+                this.stage.innerHTML = ''; 
+                this.savedScatters = [];
+
+                const container = this.stage.parentElement;
+                const baseWidth = container.clientWidth;
+                const baseHeight = container.clientHeight;
+
+                const cols = Math.floor(baseWidth / this.pixelSize);
+                const rows = Math.floor(baseHeight / this.pixelSize);
+
+                const exactWidth = cols * this.pixelSize;
+                const exactHeight = rows * this.pixelSize;
+
+                this.stage.style.width = `${exactWidth}px`;
+                this.stage.style.height = `${exactHeight}px`;
+
+                const imgAspect = img.width / img.height;
+                const stageAspect = exactWidth / exactHeight;
+
+                let bgWidth, bgHeight;
+                if (imgAspect > stageAspect) {
+                    bgHeight = exactHeight;
+                    bgWidth = exactHeight * imgAspect;
+                } else {
+                    bgWidth = exactWidth;
+                    bgHeight = exactWidth / imgAspect;
+                }
+
+                const offsetX = (exactWidth - bgWidth) / 2;
+                const offsetY = (exactHeight - bgHeight) / 2;
+
+                const fragment = document.createDocumentFragment();
+                let count = 0;
+
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                const dotBgColor = isDarkMode ? '#000000' : '#ffffff';
+
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const x = c * this.pixelSize;
+                        const y = r * this.pixelSize;
+
+                        const dot = document.createElement('div');
+                        dot.className = 'pixel-dot';
+                        dot.setAttribute('data-idx', count);
+
+                        dot.style.backgroundColor = dotBgColor;
+
+                        dot.style.setProperty('--pw', `${this.pixelSize + 0.5}px`);
+                        dot.style.setProperty('--ph', `${this.pixelSize + 0.5}px`);
+                        dot.style.setProperty('--x', `${x}px`);
+                        dot.style.setProperty('--y', `${y}px`);
+                        dot.style.setProperty('--bw', `${bgWidth}px`);
+                        dot.style.setProperty('--bh', `${bgHeight}px`);
+                        dot.style.setProperty('--bx', `${offsetX - x}px`);
+                        dot.style.setProperty('--by', `${offsetY - y}px`);
+
+                        dot.style.backgroundImage = `url(${this.imgSrc})`;
+                        fragment.appendChild(dot);
+
+                        this.savedScatters.push(Math.random() * 0.12);
+                        count++;
+                    }
+                }
+                this.stage.appendChild(fragment);
+
+                requestAnimationFrame(() => {
+                    this.stage.style.opacity = '1';
+                });
+            }
+
+            recalculate() {
+                if (!this.imgSrc) return;
+                const img = new Image();
+                img.src = this.imgSrc;
+                img.onload = () => {
+                    this.buildPixels(img);
+                    if (this.stage.classList.contains('active')) {
+                        this.animate();
+                    }
+                };
+            }
+
+            animate() {
+                const dots = this.stage.querySelectorAll('.pixel-dot');
+                if (dots.length === 0) return;
+
+                const maxDelay = 0.4;
+                const stageWidth = parseFloat(this.stage.style.width);
+                const stageHeight = parseFloat(this.stage.style.height);
+                const centerX = stageWidth / 2;
+                const centerY = stageHeight / 2;
+                const maxDistSq = Math.pow(centerX, 2) + Math.pow(centerY, 2) || 1;
+
+                this.stage.classList.remove('unstage');
+
+                dots.forEach(dot => {
+                    const idx = parseInt(dot.getAttribute('data-idx'));
+                    const dotX = parseFloat(dot.style.getPropertyValue('--x')) + this.pixelSize / 2;
+                    const dotY = parseFloat(dot.style.getPropertyValue('--y')) + this.pixelSize / 2;
+
+                    const distSq = Math.pow(dotX - centerX, 2) + Math.pow(dotY - centerY, 2);
+                    let normalizedDist = distSq / maxDistSq;
+
+                    let originalScatter = this.savedScatters[idx] || 0;
+                    let rippleDelay = normalizedDist * maxDelay;
+                    let finalDelay = Math.max(0, rippleDelay + originalScatter);
+
+                    dot.style.animationDelay = `${finalDelay}s`;
+                });
+
+                requestAnimationFrame(() => {
+                    this.stage.classList.add('active');
+                });
+            }
+
+            reset() {
+                this.stage.classList.remove('active');
+                this.stage.querySelectorAll('.pixel-dot').forEach(dot => {
+                    dot.style.animationDelay = '0s';
+                });
+                requestAnimationFrame(() => {
+                    this.stage.classList.add('unstage');
+                });
+            }
+        }
+
+        function init3DParallax() {
+            document.querySelectorAll('.reveal-section').forEach(section => {
+                const container = section.querySelector('.wave-container');
+                if (!container) return;
+
+                const isEven = section.matches(':nth-of-type(even)');
+                let ticking = false;
+
+                section.addEventListener('mousemove', (e) => {
+                    if (window.innerWidth <= 768) {
+                        container.style.transform = '';
+                        return;
+                    }
+
+                    if (!ticking) {
+                        window.requestAnimationFrame(() => {
+                            const baseAngleY = isEven ? -28 : 28;
+                            const rect = section.getBoundingClientRect();
+                            const mouseX = e.clientX - rect.left;
+                            const percentX = (mouseX / rect.width) - 0.5;
+
+                            container.style.transform = `rotateY(${baseAngleY + (percentX * 22)}deg)`;
+                            ticking = false;
+                        });
+                        ticking = true;
+                    }
+                });
+
+                section.addEventListener('mouseleave', () => {
+                    if (window.innerWidth <= 768) {
+                        container.style.transform = '';
+                    } else {
+                        container.style.transform = `rotateY(${isEven ? -28 : 28}deg)`;
+                    }
+                });
+            });
+        }
+
+        function loadPortfolioData() {
+            try {
+                portfolioData = Array.isArray(CONFIG_JSON_FILES) ? CONFIG_JSON_FILES : [];
+
+                initCoreEffects();
+                setTimeout(updateCustomScrollbar, 500); 
+                resetAutoScrollTimer(); 
+
+            } catch (error) {
+                console.error("JSON 資料加載錯誤：", error);
+            }
+        }
+
+        function initCoreEffects() {
+            effectInstances = []; 
+
+            portfolioData.forEach(project => {
+                const stageEl = document.getElementById(`stage-${project.id}`);
+                if (stageEl) {
+                    const finalImgSrc = project.imageSrc || project.imgSrc || project.image || '';
+                    const waveEffect = new FramerIntegratedWave(stageEl, finalImgSrc);
+                    effectInstances.push({ element: stageEl, instance: waveEffect });
+
+                    stageEl.addEventListener('click', () => {
+                        window.open(project.linkUrl, '_blank');
+                    });
+                }
+            });
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const matched = effectInstances.find(eff => eff.element === entry.target);
+                    if (!matched) return;
+
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.2) {
+                        entry.target.style.opacity = "1";
+                        entry.target.style.visibility = "visible";
+                        entry.target.style.transition = "opacity 0.5s ease";
+                        matched.instance.animate();
+                    }
+                    else if (!entry.isIntersecting || entry.intersectionRatio === 0) {
+                        matched.instance.reset();
+                    }
+                });
+            }, { threshold: [0, 0.2] });
+
+            effectInstances.forEach(eff => observer.observe(eff.element));
+
+            init3DParallax();
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            buildSeamlessMatrixBg();
+            loadPortfolioData();
+            initGeometricEye();
+            initMouseRippleEffect(); 
+            initTopButton(); 
+            initThemeToggle(); 
+            initCustomScrollbarDrag(); // 💡 啟用自訂右側軸滑鼠拖曳
+            updateCustomScrollbar();
+        });
+
+        window.addEventListener('resize', () => {
+            clearTimeout(window.resizeTimer);
+            window.resizeTimer = setTimeout(() => {
+                buildSeamlessMatrixBg();
+                effectInstances.forEach(eff => eff.instance.recalculate());
+                updateCustomScrollbar();
+            }, 200);
+        });
+    </script>
 </body>
+
 </html>
