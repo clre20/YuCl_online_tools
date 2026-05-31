@@ -12,6 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
     
     <script src="{{ url_for('static', filename='js/page_tracker.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/announcement.js') }}" defer></script>
 
     <style>
         :root {
@@ -32,9 +33,10 @@
             font-family: 'Outfit', 'Noto Sans TC', sans-serif;
             height: 100vh;
             height: 100dvh;
-            background: #090a0f;
+            background-color: #000000;
             color: var(--text-main);
             overflow: hidden;
+            position: relative;
         }
 
         .app-layout {
@@ -45,17 +47,22 @@
             animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        /* --- Header --- */
+        /* --- Header (引導欄) --- */
         .app-header {
             height: 64px;
-            background: #11121a;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 24px;
             z-index: 100;
             flex-shrink: 0;
+            margin: 20px 20px 0 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         }
 
         .header-left {
@@ -174,28 +181,24 @@
             display: flex;
             flex: 1;
             width: 100%;
-            height: calc(100vh - 64px);
-            height: calc(100dvh - 64px);
+            height: calc(100vh - 104px);
+            height: calc(100dvh - 104px);
             overflow: hidden;
+            gap: 0;
         }
 
         /* --- Canvas Area (Left/Center) --- */
         .canvas-area {
             flex: 1;
-            height: 100%;
-            background-color: #14151b;
-            background-image: linear-gradient(45deg, #1a1b22 25%, transparent 25%),
-                              linear-gradient(-45deg, #1a1b22 25%, transparent 25%),
-                              linear-gradient(45deg, transparent 75%, #1a1b22 75%),
-                              linear-gradient(-45deg, transparent 75%, #1a1b22 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            height: calc(100% - 20px);
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
             padding: 30px;
             overflow: hidden;
+            border-radius: 24px;
+            margin: 0 0 20px 20px;
         }
 
         .canvas-dropzone {
@@ -212,7 +215,7 @@
             max-width: 500px;
             cursor: pointer;
             transition: var(--transition);
-            background: rgba(17, 18, 26, 0.5);
+            background: rgba(24, 24, 24, 0.5);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
@@ -220,7 +223,7 @@
         }
         .canvas-dropzone:hover {
             border-color: var(--accent-cyan);
-            background: rgba(17, 18, 26, 0.7);
+            background: rgba(24, 24, 24, 0.7);
             transform: translateY(-4px) scale(1.02);
             box-shadow: 0 25px 60px rgba(6,182,212,0.25);
         }
@@ -252,18 +255,23 @@
             animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        /* --- Right Sidebar Panel --- */
+        /* --- Right Sidebar Panel (右側配置台) --- */
         .sidebar {
             width: 380px;
-            height: 100%;
-            background: #11121a;
-            border-left: 1px solid rgba(255, 255, 255, 0.08);
+            height: calc(100% - 40px);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
             padding: 24px;
             gap: 16px;
             flex-shrink: 0;
+            margin: 20px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
             animation: slideInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .sidebar::-webkit-scrollbar { width: 5px; }
@@ -308,7 +316,7 @@
             border: 1px solid var(--card-border);
             border-radius: 14px;
             overflow: hidden;
-            margin-bottom: 20px; /* Increased category gap */
+            margin-bottom: 20px;
             transition: border-color 0.3s ease, background-color 0.3s ease, transform 0.2s ease;
         }
         details:hover {
@@ -327,7 +335,7 @@
             outline: none;
             display: flex;
             align-items: center;
-            justify-content: flex-start; /* Fixed spacing alignment */
+            justify-content: flex-start;
             color: var(--text-main);
             list-style: none;
             user-select: none;
@@ -336,7 +344,7 @@
         summary:hover { color: var(--accent-cyan); }
         summary::-webkit-details-marker { display: none; }
         summary i {
-            margin-right: 12px; /* Fixed spacing */
+            margin-right: 12px;
             width: 18px;
             text-align: center;
             flex-shrink: 0;
@@ -345,7 +353,7 @@
             content: '\f107';
             font-family: 'Font Awesome 6 Free';
             font-weight: 900;
-            margin-left: auto; /* Push only the arrow to the right */
+            margin-left: auto;
             transition: transform 0.3s ease;
             color: var(--text-muted);
         }
@@ -364,14 +372,13 @@
         .form-group { position: relative; }
         .form-group label {
             display: block;
-            color: #A0A0A0; /* Muted label color */
+            color: #A0A0A0;
             margin-bottom: 6px;
-            font-size: 13px; /* Smaller font size */
+            font-size: 13px;
             font-weight: 600;
             text-align: left;
         }
         
-        /* Center text for numerical number inputs */
         .form-group input[type="number"] {
             width: 100%;
             padding: 10px 12px;
@@ -613,7 +620,6 @@
             background: linear-gradient(90deg, #eab308 0%, #1e202e 50%, #3b82f6 100%) !important;
         }
         
-        /* Custom white thumb for gradient sliders */
         .gradient-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -694,6 +700,13 @@
             .app-header {
                 padding: 0 12px;
                 height: 56px;
+                margin: 10px 10px 0 10px;
+                border-radius: 16px;
+                /* 霧面玻璃樣式更新 */
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
+                backdrop-filter: blur(35px) saturate(110%);
+                -webkit-backdrop-filter: blur(35px) saturate(110%);
+                border: 1px solid rgba(255, 255, 255, 0.2);
             }
             .header-title {
                 font-size: 1rem;
@@ -706,8 +719,8 @@
             }
             .workspace {
                 flex-direction: column;
-                height: calc(100vh - 56px);
-                height: calc(100dvh - 56px);
+                height: calc(100vh - 76px);
+                height: calc(100dvh - 76px);
                 overflow: hidden;
             }
             .canvas-area {
@@ -727,9 +740,14 @@
 
             .sidebar {
                 flex: 1;
-                width: 100%;
-                border-left: none;
-                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                width: calc(100% - 24px);
+                margin: 12px;
+                /* 霧面玻璃樣式更新 */
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%);
+                backdrop-filter: blur(35px) saturate(110%);
+                -webkit-backdrop-filter: blur(35px) saturate(110%);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 20px;
                 overflow-y: auto;
                 padding: 16px 14px;
                 gap: 12px;
@@ -774,7 +792,6 @@
             from { transform: translateY(40px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
-
     </style>
 </head>
 <body>

@@ -7,7 +7,7 @@ import sys
 #工具藍圖
 from tool.tool import register_tools
 #系統藍圖
-from core.database import db, record_system_log, limiter, init_managed_tools, init_system_config
+from core.database import db, record_system_log, limiter, init_managed_tools, init_system_config, init_default_announcements
 from routes.indexweb import indexweb_bp
 from routes.admin import admin_bp
 from core.middleware import setup_middleware
@@ -73,6 +73,7 @@ if __name__ == '__main__':
         init_projects_data() # 初始化所有子專案資料
         init_managed_tools() # 初始化工具紀錄
         init_system_config() # 初始化系統設定
+        init_default_announcements() # 初始化公告設定
         init_scheduler(app) #啟動排成器
         record_system_log('SUCCESS', 'System', 'YuCl 系統核心已成功啟動')
         
