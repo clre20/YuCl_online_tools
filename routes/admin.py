@@ -1,6 +1,6 @@
 # YuCl 新系統/admin.py
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash, current_app
-from core.database import db, Admin, ManagedTool, ToolDailyStat, SystemLog, AccessLog, ServerMetric, SystemConfig, record_system_log, limiter, get_top_pages
+from core.database import db, Admin, ManagedTool, ToolDailyStat, SystemLog, AccessLog, ServerMetric, SystemConfig, Announcement, record_system_log, limiter, get_top_pages
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 from datetime import datetime
@@ -61,6 +61,9 @@ def index():
     # 維護模式狀態
     maintenance_config = SystemConfig.query.filter_by(key='maintenance_mode').first()
     is_maintenance = maintenance_config.value == 'true' if maintenance_config else False
+
+    # 公告列表
+    announcements = Announcement.query.order_by(Announcement.created_at.desc()).all()
 
     # 伺服器即時資源
     latest_metric = ServerMetric.query.order_by(ServerMetric.timestamp.desc()).first()
@@ -142,7 +145,8 @@ def index():
                            top_pages=top_pages,
                            hide_api=hide_api,
                            is_maintenance=is_maintenance,
-                           latest_metric=latest_metric)
+                           latest_metric=latest_metric,
+                           announcements=announcements)
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
@@ -176,6 +180,82 @@ def toggle_maintenance():
     record_system_log('WARNING', 'Admin', log_msg)
     
     return jsonify({"status": "success", "new_status": new_status})
+
+@admin_bp.route('/api/sys/announcement/add', methods=['POST'])
+@login_required
+def add_announcement():
+    """ 新增系統公告 """
+    data = request.json or {}
+    content = data.get('content', '').strip()
+    ann_type = data.get('type', 'info').strip()
+    expires_at_str = data.get('expires_at', '').strip()
+    
+    if not content:
+        return jsonify({"status": "error", "message": "公告內容不能為空"}), 400
+        
+    display_duration = 5
+    try:
+        display_duration = int(data.get('display_duration', 5))
+        if display_duration <= 0:
+            display_duration = 5
+    except (ValueError, TypeError):
+        display_duration = 5
+        
+    try:
+        expires_at = None
+        if expires_at_str:
+            try:
+                expires_at = datetime.fromisoformat(expires_at_str)
+            except ValueError:
+                expires_at = datetime.strptime(expires_at_str, "%Y-%m-%d %H:%M:%S")
+        
+        new_ann = Announcement(
+            content=content,
+            type=ann_type,
+            is_active=True,
+            expires_at=expires_at,
+            display_duration=display_duration
+        )
+        db.session.add(new_ann)
+        db.session.commit()
+        
+        record_system_log('WARNING', 'Admin', f'管理員新增全站公告: {content} (類型: {ann_type})')
+        return jsonify({"status": "success", "message": "公告新增成功"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@admin_bp.route('/api/sys/announcement/toggle/<int:id>', methods=['POST'])
+@login_required
+def toggle_announcement(id):
+    """ 切換公告啟用狀態 """
+    ann = Announcement.query.get_or_404(id)
+    try:
+        ann.is_active = not ann.is_active
+        db.session.commit()
+        
+        status_str = "啟用" if ann.is_active else "停用"
+        record_system_log('WARNING', 'Admin', f'管理員{status_str}公告 (ID: {id}): {ann.content[:30]}...')
+        return jsonify({"status": "success", "is_active": ann.is_active})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@admin_bp.route('/api/sys/announcement/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_announcement(id):
+    """ 刪除公告 """
+    ann = Announcement.query.get_or_404(id)
+    try:
+        content_preview = ann.content[:30]
+        db.session.delete(ann)
+        db.session.commit()
+        
+        record_system_log('WARNING', 'Admin', f'管理員刪除了公告 (ID: {id}): {content_preview}...')
+        return jsonify({"status": "success", "message": "公告已成功刪除"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @admin_bp.route('/api/tool/toggle_status/<int:id>', methods=['POST'])
 @login_required

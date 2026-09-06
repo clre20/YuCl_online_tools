@@ -96,6 +96,16 @@ class SystemConfig(db.Model):
     value = db.Column(db.String(255))
     description = db.Column(db.String(255))
 
+class Announcement(db.Model):
+    """ 系統公告 """
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(20), default='info') # info, warning, danger, success
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=True) # 過期時間 (UTC)
+    display_duration = db.Column(db.Integer, default=5) # 顯示時間 (秒)
+
 def record_system_log(level, module, message, value=None):
     """ 輔助函數：紀錄系統日誌 """
     log = SystemLog(level=level, module=module, message=message, value=value)
@@ -274,3 +284,28 @@ def init_system_config():
             new_cfg = SystemConfig(**cfg_data)
             db.session.add(new_cfg)
     db.session.commit()
+
+def init_default_announcements():
+    """ 初始化預設公告 """
+    try:
+        # 確保舊資料庫升級，添加 display_duration 欄位
+        try:
+            db.session.execute(db.text("ALTER TABLE announcement ADD COLUMN display_duration INTEGER DEFAULT 5"))
+            db.session.commit()
+            print("[Upgrade] 公告資料表已成功升級新增 display_duration 欄位")
+        except Exception:
+            db.session.rollback()
+
+        existing = Announcement.query.first()
+        if not existing:
+            default_ann = Announcement(
+                content="歡迎來到 YuCl 線上工具系統！本站已支援全新的公告小卡功能。",
+                type="info",
+                is_active=True,
+                display_duration=5
+            )
+            db.session.add(default_ann)
+            db.session.commit()
+            print("[Init] 已建立預設系統公告")
+    except Exception as e:
+        print(f"[Init Error] 初始化公告失敗: {e}")

@@ -206,6 +206,279 @@
     });
     </script>
 
+    <!-- 全站公告設定 -->
+    <div class="card tool-card p-3 p-md-4 shadow-sm mb-4">
+        <h6 class="fw-bold mb-3 text-secondary small"><i class="fa-solid fa-bullhorn me-2"></i>全站公告管理</h6>
+        <div class="row g-4">
+            <!-- 新增公告表單 -->
+            <div class="col-12 col-md-4 border-end-md">
+                <div class="pe-md-3">
+                    <h6 class="fw-bold text-dark mb-3" style="font-size: 0.9rem;">發佈新公告</h6>
+                    <form id="announcementForm">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted" for="newAnnContent">公告內容 (支援 HTML)</label>
+                            <textarea class="form-control form-control-sm" id="newAnnContent" rows="3" placeholder="例如：系統將於今晚 22:00 進行維護..." required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted" for="newAnnType">公告樣式/等級</label>
+                            <select class="form-select form-select-sm" id="newAnnType">
+                                <option value="info">一般公告 (藍)</option>
+                                <option value="warning">重要警告 (黃)</option>
+                                <option value="danger">緊急通知 (紅)</option>
+                                <option value="success">成功/更新 (綠)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted" for="newAnnExpiry">過期時間 (不設代表永久)</label>
+                            <input type="datetime-local" class="form-control form-control-sm" id="newAnnExpiry">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted" for="newAnnDuration">存在時間 (秒，預設 5 秒)</label>
+                            <input type="number" class="form-control form-control-sm" id="newAnnDuration" value="5" min="1">
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-sm rounded-pill">
+                                <i class="fa-solid fa-plus me-1"></i> 發佈公告
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 現有公告列表 -->
+            <div class="col-12 col-md-8">
+                <h6 class="fw-bold text-dark mb-3" style="font-size: 0.9rem;">目前已發佈的公告</h6>
+                <!-- 桌機版表格 -->
+                <div class="d-none d-md-block table-responsive" style="max-height: 280px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr class="table-light">
+                                <th style="width: 40%;">內容</th>
+                                <th style="width: 12%;">類型</th>
+                                <th style="width: 12%;">狀態</th>
+                                <th style="width: 12%;">存在時間</th>
+                                <th style="width: 16%;">過期時間</th>
+                                <th style="width: 8%;" class="text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if announcements %}
+                                {% for ann in announcements %}
+                                <tr>
+                                    <td class="text-break">{{ ann.content | safe }}</td>
+                                    <td>
+                                        {% if ann.type == 'info' %}
+                                        <span class="badge bg-info text-white">一般</span>
+                                        {% elif ann.type == 'warning' %}
+                                        <span class="badge bg-warning text-dark">重要</span>
+                                        {% elif ann.type == 'danger' %}
+                                        <span class="badge bg-danger text-white">緊急</span>
+                                        {% elif ann.type == 'success' %}
+                                        <span class="badge bg-success text-white">更新</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="form-check form-switch m-0">
+                                            <input class="form-check-input toggle-ann-status" type="checkbox" data-id="{{ ann.id }}" {% if ann.is_active %}checked{% endif %}>
+                                            <label class="form-check-label small text-muted toggle-label-{{ ann.id }}">
+                                                {{ '啟用' if ann.is_active else '停用' }}
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>{{ ann.display_duration }} 秒</td>
+                                    <td class="text-muted" style="font-size: 0.75rem;">
+                                        {% if ann.expires_at %}
+                                        {{ ann.expires_at.strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                        永久
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm p-1 delete-ann-btn" data-id="{{ ann.id }}" style="font-size: 0.75rem; border-radius: 4px;">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">目前沒有公告記錄</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 手機版卡片列表 -->
+                <div class="d-block d-md-none" style="max-height: 380px; overflow-y: auto;">
+                    {% if announcements %}
+                        {% for ann in announcements %}
+                        <div class="card p-3 mb-2 shadow-sm border-0 border-start" style="border-left: 4px solid {% if ann.type == 'info' %}#0dcaf0{% elif ann.type == 'warning' %}#ffc107{% elif ann.type == 'danger' %}#dc3545{% elif ann.type == 'success' %}#198754{% endif %} !important; font-size: 0.85rem; background: #fff;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    {% if ann.type == 'info' %}
+                                    <span class="badge bg-info text-white">一般</span>
+                                    {% elif ann.type == 'warning' %}
+                                    <span class="badge bg-warning text-dark">重要</span>
+                                    {% elif ann.type == 'danger' %}
+                                    <span class="badge bg-danger text-white">緊急</span>
+                                    {% elif ann.type == 'success' %}
+                                    <span class="badge bg-success text-white">更新</span>
+                                    {% endif %}
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input toggle-ann-status" type="checkbox" data-id="{{ ann.id }}" {% if ann.is_active %}checked{% endif %}>
+                                    <label class="form-check-label small text-muted toggle-label-{{ ann.id }}">
+                                        {{ '啟用' if ann.is_active else '停用' }}
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-2 text-break" style="font-weight: 500; color: #333;">{{ ann.content | safe }}</div>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top text-muted" style="font-size: 0.75rem;">
+                                <div>
+                                    <span class="me-2"><i class="fa-regular fa-clock me-1"></i>{{ ann.display_duration }}秒</span>
+                                    <span><i class="fa-solid fa-calendar-xmark me-1"></i>
+                                        {% if ann.expires_at %}
+                                        {{ ann.expires_at.strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                        永久
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <button type="button" class="btn btn-outline-danger btn-sm p-1 py-0 delete-ann-btn" data-id="{{ ann.id }}" style="font-size: 0.75rem; border-radius: 4px; line-height: 1.5;">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4 bg-light rounded" style="font-size: 0.85rem;">目前沒有公告記錄</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @media (min-width: 768px) {
+            .border-end-md {
+                border-right: 1px solid #dee2e6 !important;
+            }
+        }
+    </style>
+
+    <script>
+    // 發佈新公告
+    document.getElementById('announcementForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const content = document.getElementById('newAnnContent').value.trim();
+        const type = document.getElementById('newAnnType').value;
+        const expires_at = document.getElementById('newAnnExpiry').value;
+        const display_duration = document.getElementById('newAnnDuration').value;
+
+        fetch('/api/sys/announcement/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, type, expires_at, display_duration })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                Swal.fire({
+                    title: '發佈成功',
+                    text: '新公告已成功發佈！',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.reload();
+                });
+            } else {
+                Swal.fire('發佈失敗', data.message || '發生未知錯誤', 'error');
+            }
+        })
+        .catch(err => {
+            Swal.fire('連線錯誤', '無法連接到伺服器', 'error');
+        });
+    });
+
+    // 切換公告狀態
+    document.querySelectorAll('.toggle-ann-status').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const id = this.getAttribute('data-id');
+            const targetState = this.checked;
+            
+            fetch(`/api/sys/announcement/toggle/${id}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    // 同步該公告的所有 toggle switch 和文字 (桌機與手機版)
+                    document.querySelectorAll(`.toggle-ann-status[data-id="${id}"]`).forEach(cb => {
+                        cb.checked = data.is_active;
+                    });
+                    document.querySelectorAll(`.toggle-label-${id}`).forEach(lbl => {
+                        lbl.textContent = data.is_active ? '啟用' : '停用';
+                    });
+                    
+                    Swal.fire({
+                        title: data.is_active ? '已啟用公告' : '已停用公告',
+                        icon: 'success',
+                        timer: 1000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    this.checked = !targetState;
+                    Swal.fire('設定失敗', data.message || '發生錯誤', 'error');
+                }
+            })
+            .catch(err => {
+                this.checked = !targetState;
+                Swal.fire('連線錯誤', '無法連接到伺服器', 'error');
+            });
+        });
+    });
+
+    // 刪除公告
+    document.querySelectorAll('.delete-ann-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            Swal.fire({
+                title: '確定要刪除這則公告嗎？',
+                text: "此動作無法還原！",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: '確定刪除',
+                cancelButtonText: '取消'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/api/sys/announcement/delete/${id}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.status === 'success') {
+                            Swal.fire({
+                                title: '已刪除',
+                                text: '公告已成功刪除。',
+                                icon: 'success',
+                                timer: 1200,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire('刪除失敗', data.message || '發生錯誤', 'error');
+                        }
+                    })
+                    .catch(err => {
+                        Swal.fire('連線錯誤', '無法連接到伺服器', 'error');
+                    });
+                }
+            });
+        });
+    });
+    </script>
+
     <!-- 數據分析圖表 -->
     <div class="row g-3 mb-4">
         <div class="col-12 col-lg-8">
@@ -456,13 +729,21 @@
             const data = await response.json();
             geojsonLayer = L.geoJson(data, {
                 style: function(feature) {
-                    const count = countryData[feature.properties.ISO_A2] || 0;
+                    let code = feature.properties['ISO3166-1-Alpha-2'] || feature.properties.ISO_A2 || '';
+                    if (code === 'CN-TW') code = 'TW';
+                    const count = countryData[code] || 0;
                     return { fillColor: getColor(count), weight: 1, opacity: 1, color: 'white', fillOpacity: 0.8 };
                 },
                 onEachFeature: function(feature, layer) {
-                    const code = feature.properties.ISO_A2;
+                    let code = feature.properties['ISO3166-1-Alpha-2'] || feature.properties.ISO_A2 || '';
+                    let displayCode = code;
+                    if (code === 'CN-TW') {
+                        code = 'TW';
+                        displayCode = 'TW';
+                    }
+                    const name = feature.properties.name || feature.properties.ADMIN || 'Unknown';
                     const count = countryData[code] || 0;
-                    layer.bindTooltip(`<b>${feature.properties.ADMIN} (${code})</b><br>訪問次數: ${count}`, { sticky: true });
+                    layer.bindTooltip(`<b>${name} (${displayCode})</b><br>訪問次數: ${count}`, { sticky: true });
                     layer.on('mouseover', function() { this.setStyle({ weight: 2, color: '#666', fillOpacity: 1 }); });
                     layer.on('mouseout', function() { geojsonLayer.resetStyle(this); });
                 }
